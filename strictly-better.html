@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strictly Better Commander Cards</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1e1e1e;
+    color: #d8d8d8;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, #2a2a2a, #222222);
+    border-bottom: 2px solid #888;
+    padding: 20px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    transition: padding 0.2s;
+  }
+
+  .h1-wrap {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.3s ease;
+  }
+
+  header h1 {
+    font-size: 2rem;
+    color: #cccccc;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+    text-align: center;
+    overflow: hidden;
+    min-height: 0;
+    opacity: 1;
+    transition: opacity 0.25s ease, margin-bottom 0.3s ease;
+  }
+
+  header.condensed {
+    padding: 12px 24px;
+  }
+
+  header.condensed .h1-wrap {
+    grid-template-rows: 0fr;
+  }
+
+  header.condensed h1 {
+    opacity: 0;
+    margin-bottom: 0;
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .controls-row + .controls-row {
+    margin-top: 6px;
+    padding: 0 6px;
+  }
+
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+    padding: 9px 36px 9px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-wrap input:focus { border-color: #999; }
+
+  .search-wrap .clear-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    font-size: 1rem;
+    display: none;
+  }
+
+  .search-wrap input:not(:placeholder-shown) ~ .clear-btn { display: block; }
+
+  label {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.6);
+    white-space: nowrap;
+  }
+
+  select {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    padding: 9px 12px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  select:focus { border-color: #999; }
+  select option { background: #16213e; }
+
+  .stat-badge {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.5);
+    white-space: nowrap;
+  }
+
+  #results-count {
+    color: #b0b0b0;
+    font-weight: bold;
+  }
+
+  main {
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .card-group {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    margin-bottom: 24px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .card-group:hover { border-color: rgba(180,180,180,0.25); }
+
+  .group-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  .better-card {
+    flex-shrink: 0;
+    text-align: center;
+    width: 150px;
+  }
+
+  .group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .group-header .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #999;
+  }
+
+  .group-header .label-arrow {
+    color: rgba(255,255,255,0.2);
+    font-size: 0.8rem;
+  }
+
+  .divider {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    gap: 6px;
+    color: rgba(255,255,255,0.2);
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .divider svg { opacity: 0.4; }
+
+  .worse-cards {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+
+  .card-item {
+    text-align: center;
+    width: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .card-img-wrap {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.06);
+    cursor: pointer;
+    width: 100%;
+    aspect-ratio: 5/7;
+  }
+
+  .card-img-wrap img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 8px;
+    transition: transform 0.2s;
+  }
+
+  .card-img-wrap:hover img { transform: scale(1.03); }
+
+  .card-img-wrap .spinner {
+    width: 100%;
+    aspect-ratio: 5/7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    opacity: 0.3;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 0.6; } }
+
+  .card-name {
+    font-size: 0.72rem;
+    margin-top: 6px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.3;
+    font-weight: 500;
+  }
+
+  .card-price {
+    font-size: 0.78rem;
+    margin-top: 3px;
+    font-weight: 700;
+    color: #4ade80;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .card-price:hover { text-decoration: underline; }
+  .card-price.foil { color: #a78bfa; }
+  .card-price.na { color: rgba(255,255,255,0.3); font-weight: 400; cursor: default; }
+
+  .card-links {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .card-links a {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.35);
+    text-decoration: none;
+    letter-spacing: 0.3px;
+    transition: color 0.15s;
+  }
+
+  .card-links a:hover { color: rgba(255,255,255,0.7); }
+
+  /* Tooltip / hover popup */
+  .card-popup {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  .card-popup img {
+    width: 280px;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  }
+
+  /* Loading overlay */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: rgba(26,26,46,0.92);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  #loading .ring {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(180,180,180,0.15);
+    border-top-color: #999;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #loading-text {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9rem;
+  }
+
+  #loading-progress {
+    width: 280px;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  #loading-bar {
+    height: 100%;
+    background: #888;
+    width: 0%;
+    transition: width 0.3s;
+    border-radius: 2px;
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255,255,255,0.3);
+    font-size: 1.1rem;
+  }
+
+  footer {
+    text-align: center;
+    padding: 32px 24px 40px;
+    color: rgba(255,255,255,0.3);
+    font-size: 0.8rem;
+    line-height: 1.8;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-top: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .group-layout { flex-direction: column; }
+    .divider { flex-direction: row; min-height: auto; }
+    .better-card { width: 100%; display: flex; gap: 12px; align-items: center; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="ring"></div>
+  <div id="loading-text">Loading card data from Scryfall…</div>
+  <div id="loading-progress"><div id="loading-bar"></div></div>
+</div>
+
+<div id="card-popup" class="card-popup"><img id="popup-img" src="" alt=""></div>
+
+<header>
+  <div class="h1-wrap"><h1>Strictly Better Commander Cards</h1></div>
+  <div class="controls">
+    <div class="controls-row">
+      <div class="search-wrap">
+        <input type="text" id="search" placeholder="Search card names…">
+        <button class="clear-btn" onclick="document.getElementById('search').value='';applyFilters()">✕</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label>Sort by</label>
+        <select id="sort">
+          <option value="name-asc">Name A–Z</option>
+          <option value="name-desc">Name Z–A</option>
+          <option value="price-desc">Price High–Low</option>
+          <option value="price-asc">Price Low–High</option>
+          <option value="beats-desc">Most Beats</option>
+        </select>
+      </div>
+    </div>
+    <div class="controls-row">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="budget-filter" style="accent-color:#4ade80;width:15px;height:15px;cursor:pointer">
+        Budget upgrades
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="underplayed-filter" style="accent-color:#4ade80;width:15px;height:15px;cursor:pointer">
+        Underplayed
+      </label>
+      <div class="stat-badge" style="margin-left:auto">Showing <span id="results-count">—</span> cards</div>
+    </div>
+  </div>
+</header>
+
+<div id="scroll-sentinel"></div>
+<main id="main-content"></main>
+
+<footer>
+  <p>This list contains cards from EDHRec's top 5,000 cards that have better versions based on Scryfall's "better than" tags. Card list pulled May 1, 2026.</p>
+  <p>Created by Keltson Howell from The Commander Pod</p>
+</footer>
+
+<script>
+// ── Raw CSV data ──────────────────────────────────────────────────────────────
+const RAW = [
+  ["Aang's Iceberg","Banishing Light"],
+  ["Abstruse Appropriation","Utter End"],
+  ["Abundant Countryside","Ancient Ziggurat"],
+  ["Admiral's Order","Cancel"],
+  ["Airship Crash","Broken Wings"],
+  ["Alhammarret's Archive","Boon Reflection"],
+  ["Amazing Acrobatics","Cancel"],
+  ["Arcane Sanctum","Submerged Boneyard"],
+  ["Arid Archway","Guildless Commons"],
+  ["Big Apple, 3 a.m.","Uncharted Haven"],
+  ["Big Score","Unexpected Windfall"],
+  ["Big Score","Pirate's Pillage"],
+  ["Bitter Reunion","Tormenting Voice"],
+  ["Black Dragon Gate","Submerged Boneyard"],
+  ["Black Dragon Gate","Foul Orchard"],
+  ["Black Dragon Gate","Rakdos Guildgate"],
+  ["Black Dragon Gate","Dimir Guildgate"],
+  ["Black Dragon Gate","Orzhov Guildgate"],
+  ["Black Dragon Gate","Golgari Guildgate"],
+  ["Blazemire Verge","Tainted Peak"],
+  ["Bloody Betrayal","Act of Treason"],
+  ["Blooming Marsh","Foul Orchard"],
+  ["Botanical Sanctum","Woodland Stream"],
+  ["Bounce Off","Unsummon"],
+  ["Brainsurge","Quick Study"],
+  ["Brass Infiniscope","Sisay's Ring"],
+  ["Breathe Your Last","Hero's Downfall"],
+  ["Breathe Your Last","Murder"],
+  ["Breeding Pool","Woodland Stream"],
+  ["Broken Concentration","Cancel"],
+  ["Bronze Walrus","Alloy Myr"],
+  ["Bulk Up","Unleash Fury"],
+  ["Burst Lightning","Shock"],
+  ["Calciform Pools","Mage-Ring Network"],
+  ["Canopy Vista","Radiant Grove"],
+  ["Canyon Slough","Polluted Mire"],
+  ["Canyon Slough","Geothermal Bog"],
+  ["Canyon Slough","Smoldering Crater"],
+  ["Cavern of Souls","Unclaimed Territory"],
+  ["Chocobo Racetrack","Zendikar's Roil"],
+  ["Choked Estuary","Submerged Boneyard"],
+  ["Citadel Gate","Boros Guildgate"],
+  ["Citadel Gate","Selesnya Guildgate"],
+  ["Citadel Gate","Orzhov Guildgate"],
+  ["Citadel Gate","Azorius Guildgate"],
+  ["Cliffgate","Rakdos Guildgate"],
+  ["Cliffgate","Boros Guildgate"],
+  ["Cliffgate","Izzet Guildgate"],
+  ["Cliffgate","Gruul Guildgate"],
+  ["Coldsteel Heart","Charcoal Diamond"],
+  ["Coldsteel Heart","Marble Diamond"],
+  ["Coldsteel Heart","Sky Diamond"],
+  ["Coldsteel Heart","Fire Diamond"],
+  ["Coldsteel Heart","Moss Diamond"],
+  ["Collective Resistance","Naturalize"],
+  ["Corrupted Conviction","Altar's Reap"],
+  ["Costly Plunder","Altar's Reap"],
+  ["Counterspell","Wizard's Retort"],
+  ["Creeping Tar Pit","Submerged Boneyard"],
+  ["Crumbling Necropolis","Submerged Boneyard"],
+  ["Crystal Grotto","Zhalfirin Void"],
+  ["Darkslick Shores","Submerged Boneyard"],
+  ["Demand Answers","Tormenting Voice"],
+  ["Demand Answers","Thrill of Possibility"],
+  ["Desperate Ritual","Pyretic Ritual"],
+  ["Dimir Guildgate","Submerged Boneyard"],
+  ["Disallow","Voidslime"],
+  ["Dismal Backwater","Submerged Boneyard"],
+  ["Dissolve","Cancel"],
+  ["Drowned Catacomb","Submerged Boneyard"],
+  ["Drown in Dreams","Stroke of Genius"],
+  ["Eaten by Piranhas","Frogify"],
+  ["Eclipsed Steppe","Sunlit Marsh"],
+  ["Edgewall Inn","Uncharted Haven"],
+  ["Elfsworn Giant","Sporemound"],
+  ["Encroaching Dragonstorm","Explosive Vegetation"],
+  ["End the Festivities","Blazing Volley"],
+  ["Enduring Courage","Ogre Battledriver"],
+  ["Entish Restoration","Roiling Regrowth"],
+  ["Escape Tunnel","Terramorphic Expanse"],
+  ["Escape Tunnel","Evolving Wilds"],
+  ["Eusocial Engineering","Zendikar's Roil"],
+  ["Eviscerator's Insight","Costly Plunder"],
+  ["Eviscerator's Insight","Altar's Reap"],
+  ["Experimental Augury","Steady Progress"],
+  ["Experimental Augury","Contentious Plan"],
+  ["Fading Hope","Unsummon"],
+  ["Fanatical Offering","Costly Plunder"],
+  ["Fanatical Offering","Altar's Reap"],
+  ["Feather of Flight","Angelic Gift"],
+  ["Feed the Cycle","Murder"],
+  ["Feed the Cycle","Hero's Downfall"],
+  ["Feed the Infection","Ambition's Cost"],
+  ["Felidar Retreat","Zendikar's Roil"],
+  ["Festering Gulch","Foul Orchard"],
+  ["Fetid Pools","Remote Isle"],
+  ["Fetid Pools","Contaminated Aquifer"],
+  ["Final Fortune","Last Chance"],
+  ["Flare of Denial","Cancel"],
+  ["Floodfarm Verge","Nimbus Maze"],
+  ["Foolish Fate","Murder"],
+  ["Forbid","Cancel"],
+  ["Forbidden Friendship","Krenko's Command"],
+  ["Forbidden Friendship","Dragon Fodder"],
+  ["Fountainport Bell","Traveler's Amulet"],
+  ["Frontier Bivouac","Woodland Stream"],
+  ["Frost Marsh","Submerged Boneyard"],
+  ["Furnace Reins","Act of Treason"],
+  ["Gilt-Leaf Palace","Foul Orchard"],
+  ["Gloomlake Verge","Tainted Isle"],
+  ["Glorious Gale","Essence Scatter"],
+  ["Goatnap","Act of Treason"],
+  ["Golgari Guildgate","Foul Orchard"],
+  ["Grab the Prize","Tormenting Voice"],
+  ["Great Train Heist","Relentless Assault"],
+  ["Gudul Lurker","Triton Shorestalker"],
+  ["Gudul Lurker","Mist-Cloaked Herald"],
+  ["Haste Magic","Blazing Crescendo"],
+  ["Hedron Archive","Sisay's Ring"],
+  ["Hellspur Posse Boss","Beetleback Chief"],
+  ["Heritage Reclamation","Return to Nature"],
+  ["Heritage Reclamation","Naturalize"],
+  ["Hero's Downfall","Murder"],
+  ["High Noon","Rule of Law"],
+  ["Hinterland Harbor","Woodland Stream"],
+  ["Hissing Quagmire","Foul Orchard"],
+  ["Ice Out","Cancel"],
+  ["Ichor Elixir","Sisay's Ring"],
+  ["Indatha Triome","Foul Orchard"],
+  ["Indatha Triome","Sandsteppe Citadel"],
+  ["Indebted Spirit","Doomed Traveler"],
+  ["Insidious Fungus","Caustic Caterpillar"],
+  ["Invasion of Zendikar // Awakened Skyclave","Explosive Vegetation"],
+  ["Irrigated Farmland","Drifting Meadow"],
+  ["Irrigated Farmland","Remote Isle"],
+  ["Irrigated Farmland","Idyllic Beachfront"],
+  ["Jungle Hollow","Foul Orchard"],
+  ["Jwar Isle Refuge","Submerged Boneyard"],
+  ["Kellan, the Fae-Blooded // Birthright Boon","Open the Armory"],
+  ["Ketria Triome","Woodland Stream"],
+  ["Kitchen","Woodland Stream"],
+  ["Lakeside Shack","Woodland Stream"],
+  ["Legion Leadership // Legion Stronghold","Unleash Fury"],
+  ["Lightning Bolt","Lightning Strike"],
+  ["Lightning Bolt","Shock"],
+  ["Lorehold Campus","Boros Guildgate"],
+  ["Lounge","Foul Orchard"],
+  ["Lumbering Falls","Woodland Stream"],
+  ["Lush Oasis","Woodland Stream"],
+  ["Mana Drain","Counterspell"],
+  ["Managorger Hydra","Taurean Mauler"],
+  ["Mana Sculpt","Cancel"],
+  ["Manor Gate","Simic Guildgate"],
+  ["Manor Gate","Golgari Guildgate"],
+  ["Manor Gate","Selesnya Guildgate"],
+  ["Manor Gate","Gruul Guildgate"],
+  ["Map the Frontier","Explosive Vegetation"],
+  ["Mastermind's Acquisition","Diabolic Tutor"],
+  ["Migration Path","Explosive Vegetation"],
+  ["Mirrorhall Mimic // Ghastly Mimicry","Clone"],
+  ["Molten Collapse","Dreadbore"],
+  ["Morphic Pool","Submerged Boneyard"],
+  ["Multiversal Passage","Uncharted Haven"],
+  ["Murky Sewer","Submerged Boneyard"],
+  ["Mystical Tutor","Personal Tutor"],
+  ["Mythos of Nethroi","Murder"],
+  ["Naga Fleshcrafter","Clone"],
+  ["Neutralize","Cancel"],
+  ["New Generation's Technique","Explosive Vegetation"],
+  ["Night Market","Uncharted Haven"],
+  ["Noggle the Mind","Frogify"],
+  ["Oasis Gardener","Alloy Myr"],
+  ["Ooze Spill","Cancel"],
+  ["Opulent Palace","Woodland Stream"],
+  ["Opulent Palace","Submerged Boneyard"],
+  ["Opulent Palace","Foul Orchard"],
+  ["Origin of Metalbending","Naturalize"],
+  ["Overgrown Tomb","Foul Orchard"],
+  ["Pack's Betrayal","Act of Treason"],
+  ["Path of the Schemer","Extract from Darkness"],
+  ["Perilous Snare","Banishing Light"],
+  ["Phyrexian Metamorph","Clone"],
+  ["Piercing Exhale","Bite Down"],
+  ["Play with Fire","Shock"],
+  ["Poison the Cup","Murder"],
+  ["Preordain","Serum Visions"],
+  ["Price of Loyalty","Act of Treason"],
+  ["Prismari Campus","Izzet Guildgate"],
+  ["Promising Vein","Bant Panorama"],
+  ["Promising Vein","Jund Panorama"],
+  ["Promising Vein","Naya Panorama"],
+  ["Psychic Paper","Trailblazer's Boots"],
+  ["Psychic Paper","Prowler's Helm"],
+  ["Qarsi Revenant","Vampire Nighthawk"],
+  ["Quandrix Campus","Woodland Stream"],
+  ["Quandrix Campus","Simic Guildgate"],
+  ["Radiant Summit","Sacred Peaks"],
+  ["Raugrin Triome","Mystic Monastery"],
+  ["Reckoner's Bargain","Altar's Reap"],
+  ["Reconnaissance Mission","Coastal Piracy"],
+  ["Refute","Cancel"],
+  ["Relic of Sauron","Sisay's Ring"],
+  ["Restart Sequence","Zombify"],
+  ["Return from the Wilds","Farhaven Elf"],
+  ["Return the Favor","Wild Ricochet"],
+  ["Return to Nature","Naturalize"],
+  ["Reverse the Polarity","Cancel"],
+  ["Rising of the Day","Fervor"],
+  ["Romantic Rendezvous","Tormenting Voice"],
+  ["Ruin-Lurker Bat","Healer's Hawk"],
+  ["Rumble Arena","Zhalfirin Void"],
+  ["Rumble Arena","Crystal Grotto"],
+  ["Sandsteppe Citadel","Foul Orchard"],
+  ["Saruman's Trickery","Cancel"],
+  ["Savage Lands","Foul Orchard"],
+  ["Savai Triome","Nomad Outpost"],
+  ["Scattered Groves","Drifting Meadow"],
+  ["Scattered Groves","Radiant Grove"],
+  ["Scatter to the Winds","Cancel"],
+  ["Scorched Geyser","Molten Tributary"],
+  ["Scuttlemutt","Alloy Myr"],
+  ["Sea Gate","Azorius Guildgate"],
+  ["Sea Gate","Submerged Boneyard"],
+  ["Sea Gate","Woodland Stream"],
+  ["Sea Gate","Dimir Guildgate"],
+  ["Sea Gate","Simic Guildgate"],
+  ["Sea Gate","Izzet Guildgate"],
+  ["Seaside Citadel","Woodland Stream"],
+  ["Secluded Courtyard","Unclaimed Territory"],
+  ["Secluded Glen","Submerged Boneyard"],
+  ["Secluded Starforge","Urza's Factory"],
+  ["Secret Passage","Submerged Boneyard"],
+  ["Seedship Impact","Naturalize"],
+  ["Sheltered Thicket","Wooded Ridgeline"],
+  ["Sheltered Thicket","Smoldering Crater"],
+  ["Shire Terrace","Naya Panorama"],
+  ["Shire Terrace","Jund Panorama"],
+  ["Shire Terrace","Bant Panorama"],
+  ["Shower of Arrows","Broken Wings"],
+  ["Silverquill Campus","Orzhov Guildgate"],
+  ["Silver Scrutiny","Mind Spring"],
+  ["Simic Guildgate","Woodland Stream"],
+  ["Sinister Sabotage","Cancel"],
+  ["Skyclave Relic","Darksteel Ingot"],
+  ["Skyshroud Claim","Ranger's Path"],
+  ["Slither Blade","Mist-Cloaked Herald"],
+  ["Sodden Verdure","Tangled Islet"],
+  ["Soured Springs","Submerged Boneyard"],
+  ["Spell Snuff","Cancel"],
+  ["Spider-Man No More","Frogify"],
+  ["Spin Out","Murder"],
+  ["Splinter's Technique","Diabolic Tutor"],
+  ["Stoic Rebuttal","Cancel"],
+  ["Stonespeaker Crystal","Sisay's Ring"],
+  ["Strangled Cemetery","Foul Orchard"],
+  ["Sunken Citadel","Uncharted Haven"],
+  ["Sunken Hollow","Submerged Boneyard"],
+  ["Systems Override","Act of Treason"],
+  ["Taiga","Stomping Ground"],
+  ["Taiga","Gruul Guildgate"],
+  ["Take for a Ride","Act of Treason"],
+  ["Tarnation Vista","Uncharted Haven"],
+  ["Tear Asunder","Naturalize"],
+  ["Tectonic Hazard","Blazing Volley"],
+  ["Temple of Deceit","Submerged Boneyard"],
+  ["Temple of Malady","Foul Orchard"],
+  ["Temple of Mystery","Woodland Stream"],
+  ["Thornwood Falls","Woodland Stream"],
+  ["Thought Collapse","Cancel"],
+  ["Thran Dynamo","Sisay's Ring"],
+  ["Three Steps Ahead","Cancel"],
+  ["Thrill of Possibility","Tormenting Voice"],
+  ["Thriving Grove","Foul Orchard"],
+  ["Thriving Grove","Woodland Stream"],
+  ["Thriving Isle","Woodland Stream"],
+  ["Thriving Isle","Submerged Boneyard"],
+  ["Thriving Moor","Submerged Boneyard"],
+  ["Thriving Moor","Foul Orchard"],
+  ["Town Greeter","Satyr Wayfinder"],
+  ["Twist Reality","Cancel"],
+  ["Undergrowth","Fog"],
+  ["Unexpected Request","Act of Treason"],
+  ["Unravel","Cancel"],
+  ["Urban Retreat","Seaside Citadel"],
+  ["Urban Retreat","Woodland Stream"],
+  ["Utter Insignificance","Eaten by Piranhas"],
+  ["Vampiric Tutor","Imperial Seal"],
+  ["Vapor Snag","Unsummon"],
+  ["Vastwood Surge","Explosive Vegetation"],
+  ["Veil of Summer","Autumn's Veil"],
+  ["Vengeful Possession","Act of Treason"],
+  ["Vernal Fen","Haunted Mire"],
+  ["Village Rites","Altar's Reap"],
+  ["Waterfront District","Submerged Boneyard"],
+  ["Watery Grave","Submerged Boneyard"],
+  ["Wild Slash","Shock"],
+  ["Wild Unraveling","Cancel"],
+  ["Wilt","Naturalize"],
+  ["Winding Way","Mulch"],
+  ["Witherbloom Campus","Golgari Guildgate"],
+  ["Witherbloom Campus","Foul Orchard"],
+  ["Witness Protection","Frogify"],
+  ["Wizard's Retort","Cancel"],
+  ["Woodland Cemetery","Foul Orchard"],
+  ["Word of Undoing","Unsummon"],
+  ["Words of Wisdom","Vision Skeins"],
+  ["Worldly Tutor","Sylvan Tutor"],
+  ["World Map","Traveler's Amulet"],
+  ["Wrath of God","Day of Judgment"],
+  ["You Find the Villains' Lair","Cancel"],
+  ["Zagoth Triome","Woodland Stream"],
+  ["Zagoth Triome","Submerged Boneyard"],
+  ["Zagoth Triome","Opulent Palace"],
+  ["Zagoth Triome","Foul Orchard"],
+];
+
+// ── Group by Column A ─────────────────────────────────────────────────────────
+const groups = {};
+for (const [better, worse] of RAW) {
+  if (!groups[better]) groups[better] = new Set();
+  groups[better].add(worse);
+}
+const groupList = Object.entries(groups).map(([better, worseSet]) => ({
+  better,
+  worse: [...worseSet],
+}));
+
+// ── Collect all unique card names ────────────────────────────────────────────
+const allNames = new Set();
+for (const { better, worse } of groupList) {
+  allNames.add(better);
+  for (const w of worse) allNames.add(w);
+}
+const nameList = [...allNames];
+
+// ── Scryfall data store ───────────────────────────────────────────────────────
+const cardData = {}; // name -> { image, price, priceLabel, foil, url, tcgplayer }
+const edhrecData = {}; // name -> { numDecks, potentialDecks, pct } | null
+
+function fmtDecks(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
+  return String(n);
+}
+
+function edhrecSlug(name) {
+  return name.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, "-");
+}
+
+async function fetchEdhrecCard(name) {
+  try {
+    const res = await fetch(`https://json.edhrec.com/pages/cards/${edhrecSlug(name)}.json`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const card = json?.container?.json_dict?.card ?? json?.card ?? null;
+    if (!card) return null;
+    const num = card.num_decks ?? null;
+    const potential = card.potential_decks ?? null;
+    if (num == null || potential == null || potential === 0) return null;
+    return { numDecks: num, potentialDecks: potential, pct: ((num / potential) * 100).toFixed(2) };
+  } catch {
+    return null;
+  }
+}
+
+async function loadEdhrecData() {
+  for (const name of nameList) {
+    if (edhrecData[name] !== undefined) continue;
+    const result = await fetchEdhrecCard(name);
+    edhrecData[name] = result; // null if failed/missing
+    // Update any rendered anchors for this card
+    document.querySelectorAll(`[data-edhrec="${CSS.escape(name)}"]`).forEach(el => {
+      el.textContent = result ? `${result.pct}% of ${fmtDecks(result.potentialDecks)} decks` : "EDHRec";
+    });
+    if (document.getElementById("underplayed-filter")?.checked) applyFilters();
+    await new Promise(r => setTimeout(r, 80));
+  }
+}
+
+async function fetchBatch(names) {
+  const identifiers = names.map(name => ({ name }));
+  const res = await fetch("https://api.scryfall.com/cards/collection", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifiers }),
+  });
+  const json = await res.json();
+  return json.data || [];
+}
+
+function getImageUri(card) {
+  if (card.image_uris) return card.image_uris.normal;
+  if (card.card_faces && card.card_faces[0].image_uris)
+    return card.card_faces[0].image_uris.normal;
+  return null;
+}
+
+function getPriceLabel(card) {
+  const usd = parseFloat(card.prices?.usd);
+  const usdFoil = parseFloat(card.prices?.usd_foil);
+  if (!isNaN(usd)) return { label: `$${usd.toFixed(2)}`, value: usd, foil: false };
+  if (!isNaN(usdFoil)) return { label: `$${usdFoil.toFixed(2)} foil`, value: usdFoil, foil: true };
+  return { label: "—", value: null, foil: false };
+}
+
+async function loadAllCards() {
+  const bar = document.getElementById("loading-bar");
+  const text = document.getElementById("loading-text");
+  const BATCH = 75;
+  const chunks = [];
+  for (let i = 0; i < nameList.length; i += BATCH)
+    chunks.push(nameList.slice(i, i + BATCH));
+
+  let done = 0;
+  for (const chunk of chunks) {
+    text.textContent = `Loading cards… (${done}/${nameList.length})`;
+    try {
+      const cards = await fetchBatch(chunk);
+      for (const card of cards) {
+        const name = card.name;
+        const price = getPriceLabel(card);
+        cardData[name] = {
+          image: getImageUri(card),
+          price: price.value,
+          priceLabel: price.label,
+          foil: price.foil,
+          url: card.scryfall_uri,
+          tcgplayer: card.purchase_uris?.tcgplayer ?? null,
+        };
+      }
+    } catch (e) {
+      console.warn("Scryfall batch failed:", e);
+    }
+    done = Math.min(done + BATCH, nameList.length);
+    bar.style.width = `${Math.round((done / nameList.length) * 100)}%`;
+    // Polite delay between batches
+    if (chunks.indexOf(chunk) < chunks.length - 1)
+      await new Promise(r => setTimeout(r, 120));
+  }
+}
+
+// ── Popup on hover ────────────────────────────────────────────────────────────
+const popup = document.getElementById("card-popup");
+const popupImg = document.getElementById("popup-img");
+
+document.addEventListener("mousemove", e => {
+  const x = e.clientX, y = e.clientY;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = x + 16, top = y - 60;
+  if (left + 290 > vw) left = x - 296;
+  if (top + 400 > vh) top = vh - 410;
+  popup.style.left = left + "px";
+  popup.style.top = top + "px";
+});
+
+function showPopup(img) { popupImg.src = img; popup.style.display = "block"; }
+function hidePopup() { popup.style.display = "none"; }
+
+// ── Render helpers ────────────────────────────────────────────────────────────
+function cardEl(name, isMain) {
+  const data = cardData[name];
+  const div = document.createElement("div");
+  div.className = "card-item" + (isMain ? " main-card" : "");
+
+  const wrap = document.createElement("div");
+  wrap.className = "card-img-wrap";
+
+  if (data?.image) {
+    const img = document.createElement("img");
+    img.src = data.image;
+    img.alt = name;
+    img.loading = "lazy";
+    if (data.url) img.style.cursor = "pointer";
+    img.addEventListener("mouseenter", () => showPopup(data.image));
+    img.addEventListener("mouseleave", hidePopup);
+    if (data.url) img.addEventListener("click", () => window.open(data.url, "_blank"));
+    wrap.appendChild(img);
+  } else {
+    const ph = document.createElement("div");
+    ph.className = "spinner";
+    ph.textContent = "🃏";
+    wrap.appendChild(ph);
+  }
+
+  div.appendChild(wrap);
+
+  const nameDiv = document.createElement("div");
+  nameDiv.className = "card-name";
+  nameDiv.textContent = name;
+  div.appendChild(nameDiv);
+
+  const priceDiv = document.createElement("div");
+  if (data) {
+    priceDiv.className = "card-price" + (data.foil ? " foil" : data.price === null ? " na" : "");
+    priceDiv.textContent = data.priceLabel;
+    if (data.tcgplayer && data.price !== null) {
+      priceDiv.title = "View on TCGPlayer";
+      priceDiv.addEventListener("click", () => window.open(data.tcgplayer, "_blank"));
+    }
+  } else {
+    priceDiv.className = "card-price na";
+    priceDiv.textContent = "—";
+  }
+  div.appendChild(priceDiv);
+
+  const linksDiv = document.createElement("div");
+  linksDiv.className = "card-links";
+  const edhrecA = document.createElement("a");
+  edhrecA.href = `https://edhrec.com/cards/${edhrecSlug(name)}`;
+  edhrecA.target = "_blank";
+  edhrecA.rel = "noopener";
+  edhrecA.dataset.edhrec = name;
+  const ed = edhrecData[name];
+  edhrecA.textContent = ed
+    ? `${ed.pct}% of ${ed.potentialDecks.toLocaleString()} decks`
+    : (edhrecData[name] === null ? "EDHRec" : "EDHRec…");
+  linksDiv.appendChild(edhrecA);
+  div.appendChild(linksDiv);
+
+  return div;
+}
+
+function renderGroup(group) {
+  const div = document.createElement("div");
+  div.className = "card-group";
+  div.dataset.name = group.better.toLowerCase();
+  div.dataset.price = cardData[group.better]?.price ?? -1;
+  div.dataset.beats = group.worse.length;
+
+  const layout = document.createElement("div");
+  layout.className = "group-layout";
+
+  const betterWrap = document.createElement("div");
+  betterWrap.className = "better-card";
+  betterWrap.appendChild(cardEl(group.better, true));
+  layout.appendChild(betterWrap);
+
+  const divider = document.createElement("div");
+  divider.className = "divider";
+  divider.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M5 12h14M12 5l7 7-7 7"/>
+  </svg><span>beats</span>`;
+  layout.appendChild(divider);
+
+  const worseWrap = document.createElement("div");
+  worseWrap.className = "worse-cards";
+  for (const w of group.worse) worseWrap.appendChild(cardEl(w, false));
+  layout.appendChild(worseWrap);
+
+  div.appendChild(layout);
+  return div;
+}
+
+// ── Filter & sort ─────────────────────────────────────────────────────────────
+let currentGroups = [...groupList];
+
+function applyFilters() {
+  const query = document.getElementById("search").value.toLowerCase().trim();
+  const sortVal = document.getElementById("sort").value;
+
+  const underplayedOnly = document.getElementById("underplayed-filter").checked;
+  const budgetOnly = document.getElementById("budget-filter").checked;
+
+  currentGroups = groupList.filter(g => {
+    if (query && !g.better.toLowerCase().includes(query) &&
+        !g.worse.some(w => w.toLowerCase().includes(query))) return false;
+    if (budgetOnly) {
+      const betterPrice = cardData[g.better]?.price ?? null;
+      if (betterPrice === null) return false;
+      if (!g.worse.some(w => (cardData[w]?.price ?? null) !== null && cardData[w].price > betterPrice)) return false;
+    }
+    if (underplayedOnly) {
+      const betterDecks = edhrecData[g.better]?.numDecks ?? null;
+      if (betterDecks === null) return false;
+      const worseMax = Math.max(...g.worse.map(w => edhrecData[w]?.numDecks ?? 0));
+      if (betterDecks >= worseMax) return false;
+    }
+    return true;
+  });
+
+  currentGroups.sort((a, b) => {
+    if (sortVal === "name-asc") return a.better.localeCompare(b.better);
+    if (sortVal === "name-desc") return b.better.localeCompare(a.better);
+    if (sortVal === "price-desc") return (cardData[b.better]?.price ?? -1) - (cardData[a.better]?.price ?? -1);
+    if (sortVal === "price-asc") {
+      const pa = cardData[a.better]?.price ?? Infinity;
+      const pb = cardData[b.better]?.price ?? Infinity;
+      return pa - pb;
+    }
+    if (sortVal === "beats-desc") return b.worse.length - a.worse.length;
+    return 0;
+  });
+
+  renderAll();
+}
+
+function renderAll() {
+  const container = document.getElementById("main-content");
+  container.innerHTML = "";
+  document.getElementById("results-count").textContent = currentGroups.length;
+
+  if (currentGroups.length === 0) {
+    container.innerHTML = '<div class="no-results">No cards match your filters.</div>';
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  for (const g of currentGroups) frag.appendChild(renderGroup(g));
+  container.appendChild(frag);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+new IntersectionObserver(
+  ([entry]) => document.querySelector("header").classList.toggle("condensed", !entry.isIntersecting),
+  { threshold: 0 }
+).observe(document.getElementById("scroll-sentinel"));
+
+document.getElementById("search").addEventListener("input", applyFilters);
+document.getElementById("sort").addEventListener("change", applyFilters);
+document.getElementById("budget-filter").addEventListener("change", applyFilters);
+document.getElementById("underplayed-filter").addEventListener("change", applyFilters);
+
+(async () => {
+  await loadAllCards();
+  document.getElementById("loading").style.display = "none";
+  applyFilters();
+  loadEdhrecData(); // runs in background, updates anchors as data arrives
+})();
+</script>
+</body>
+</html>
