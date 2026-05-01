@@ -626,27 +626,37 @@ async function fetchEdhrecCard(name) {
 }
 
 async function loadEdhrecData() {
+  const CONCURRENCY = 8;
   const bar = document.getElementById("loading-bar");
   const text = document.getElementById("loading-text");
   const loadingEl = document.getElementById("loading");
   const total = nameList.length;
   let done = 0;
-  for (const name of nameList) {
-    if (edhrecData[name] !== undefined) { done++; continue; }
-    const result = await fetchEdhrecCard(name);
-    edhrecData[name] = result;
-    done++;
-    document.querySelectorAll(`[data-edhrec="${CSS.escape(name)}"]`).forEach(el => {
-      el.textContent = result ? `${result.pct}% of ${fmtDecks(result.potentialDecks)} decks` : "EDHRec";
-    });
-    if (loadingEl.style.display !== "none") {
-      bar.style.width = `${Math.round((done / total) * 100)}%`;
-      text.textContent = `Loading EDHRec data… (${done}/${total})`;
+  const queue = nameList.filter(n => edhrecData[n] === undefined);
+  done = total - queue.length; // pre-cached cards count as done
+
+  async function worker() {
+    while (queue.length > 0) {
+      const name = queue.shift();
+      const result = await fetchEdhrecCard(name);
+      edhrecData[name] = result;
+      done++;
+      document.querySelectorAll(`[data-edhrec="${CSS.escape(name)}"]`).forEach(el => {
+        el.textContent = result ? `${result.pct}% of ${fmtDecks(result.potentialDecks)} decks` : "EDHRec";
+      });
+      if (loadingSource === 'edhrec') {
+        bar.style.width = `${Math.round((done / total) * 100)}%`;
+        text.textContent = `Loading EDHRec data… (${done}/${total})`;
+      }
     }
-    await new Promise(r => setTimeout(r, 80));
   }
+
+  await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+
   edhrecLoaded = true;
-  if (loadingEl.style.display !== "none") {
+  saveEdhrecCache(edhrecData);
+  if (loadingSource === 'edhrec') {
+    loadingSource = null;
     loadingEl.style.display = "none";
     applyFilters();
   }
@@ -689,6 +699,28 @@ function savePriceCache(prices) {
   } catch { /* quota exceeded — skip */ }
 }
 
+// ── EDHRec caching (localStorage, 24h TTL) ──────────────────────────────────
+const EDHREC_CACHE_KEY = 'sb-edhrec-v1';
+const EDHREC_CACHE_TTL = 86_400_000;
+
+function loadCachedEdhrecData() {
+  try {
+    const raw = localStorage.getItem(EDHREC_CACHE_KEY);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > EDHREC_CACHE_TTL) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function saveEdhrecCache(data) {
+  try {
+    localStorage.setItem(EDHREC_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+  } catch { /* quota exceeded — skip */ }
+}
+
 // Scryfall collection API rejects '// back face' DFC names — use front face only
 function scryfallName(name) {
   return name.includes(' // ') ? name.split(' // ')[0] : name;
@@ -701,9 +733,10 @@ async function loadPrices() {
     chunks.push(nameList.slice(i, i + BATCH));
 
   const newPrices = {};
+  const bar = document.getElementById("loading-bar");
+  const text = document.getElementById("loading-text");
 
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
+  async function fetchChunk(chunk) {
     // Map scryfall lookup name → original name for DFCs
     const lookup = Object.fromEntries(chunk.map(n => [scryfallName(n), n]));
     try {
@@ -754,12 +787,21 @@ async function loadPrices() {
     } catch (e) {
       console.warn("Scryfall price batch failed:", e);
     }
-    if (i < chunks.length - 1)
-      await new Promise(r => setTimeout(r, 120));
+    pricesFetched += chunk.length;
+    if (loadingSource === 'price') {
+      bar.style.width = `${Math.round((pricesFetched / nameList.length) * 100)}%`;
+      text.textContent = `Loading price data… (${pricesFetched}/${nameList.length})`;
+    }
   }
 
+  await Promise.all(chunks.map(fetchChunk));
+
+  pricesLoaded = true;
   savePriceCache(newPrices);
-  // Re-filter/sort now that prices are available
+  if (loadingSource === 'price') {
+    loadingSource = null;
+    document.getElementById("loading").style.display = "none";
+  }
   applyFilters();
 }
 
@@ -1056,6 +1098,9 @@ function clearSearch() {
 // ── Filter & sort ─────────────────────────────────────────────────────────────
 let currentGroups = [];
 let edhrecLoaded = false;
+let pricesLoaded = false;
+let pricesFetched = 0;
+let loadingSource = null; // 'edhrec' | 'price' | null
 
 function applyFilters() {
   const rawQuery = document.getElementById("search").value.trim();
@@ -1068,11 +1113,20 @@ function applyFilters() {
 
   if (!edhrecLoaded && (sortVal === "most-played" || underplayedOnly)) {
     const done = nameList.filter(n => edhrecData[n] !== undefined).length;
+    loadingSource = 'edhrec';
     document.getElementById("loading-bar").style.width = `${Math.round((done / nameList.length) * 100)}%`;
     document.getElementById("loading-text").textContent = `Loading EDHRec data… (${done}/${nameList.length})`;
     document.getElementById("loading").style.display = "flex";
     return;
   }
+  if (!pricesLoaded && (sortVal === "price-asc" || sortVal === "price-desc" || budgetOnly)) {
+    loadingSource = 'price';
+    document.getElementById("loading-bar").style.width = `${Math.round((pricesFetched / nameList.length) * 100)}%`;
+    document.getElementById("loading-text").textContent = `Loading price data… (${pricesFetched}/${nameList.length})`;
+    document.getElementById("loading").style.display = "flex";
+    return;
+  }
+  loadingSource = null;
   document.getElementById("loading").style.display = "none";
 
   const scope = document.getElementById("search-scope").value;
@@ -1228,11 +1282,22 @@ document.getElementById("underplayed-filter").addEventListener("change", applyFi
     for (const [name, p] of Object.entries(cachedPrices)) {
       if (cardData[name]) Object.assign(cardData[name], p);
     }
+    pricesLoaded = true;
+    pricesFetched = nameList.length;
+  }
+
+  // Apply cached EDHRec data before first render so sort/filter work immediately
+  const cachedEdhrec = loadCachedEdhrecData();
+  if (cachedEdhrec) {
+    for (const [name, d] of Object.entries(cachedEdhrec)) {
+      edhrecData[name] = d;
+    }
+    edhrecLoaded = true;
   }
 
   document.getElementById("loading").style.display = "none";
   applyFilters();
-  loadEdhrecData(); // runs in background, updates anchors as data arrives
+  if (!cachedEdhrec) loadEdhrecData(); // fetch in background if not cached
   if (!cachedPrices) loadPrices(); // fetch prices in background if not cached
 })();
 </script>
