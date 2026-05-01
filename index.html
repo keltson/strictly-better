@@ -22,7 +22,7 @@
     top: 0;
     z-index: 100;
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    transition: padding 0.2s;
+    transition: padding 0.2s, transform 0.3s ease;
   }
 
   .h1-wrap {
@@ -373,9 +373,99 @@
   }
 
   @media (max-width: 600px) {
-    .group-layout { flex-direction: column; }
-    .divider { flex-direction: row; min-height: auto; }
-    .better-card { width: 100%; display: flex; gap: 12px; align-items: center; }
+    header {
+      padding: 10px 14px;
+    }
+
+    header h1 {
+      font-size: 1rem;
+      margin-bottom: 12px;
+      text-align: left;
+    }
+
+    header.condensed {
+      padding: 10px 14px;
+    }
+
+    header.condensed .h1-wrap {
+      grid-template-rows: 1fr;
+    }
+
+    header.condensed h1 {
+      opacity: 1;
+      margin-bottom: 12px;
+    }
+
+    .search-wrap {
+      min-width: 0;
+    }
+
+    .controls-row {
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.78rem;
+    }
+
+    select {
+      font-size: 0.85rem;
+      padding: 8px 8px;
+    }
+
+    main {
+      padding: 12px;
+    }
+
+    .card-group {
+      padding: 14px 12px;
+      margin-bottom: 16px;
+      border-radius: 12px;
+    }
+
+    .group-layout {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    .better-card {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .better-card .card-item {
+      width: 180px;
+    }
+
+    .divider {
+      flex-direction: row;
+      min-height: auto;
+      justify-content: center;
+      padding: 2px 0;
+    }
+
+    .worse-cards {
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .worse-cards .card-item {
+      width: 150px;
+    }
+
+    .worse-cards .card-item:only-child {
+      width: 180px;
+    }
+
+    .card-popup {
+      display: none !important;
+    }
+
+    header.header-hidden {
+      transform: translateY(-100%);
+    }
   }
 </style>
 </head>
@@ -1049,6 +1139,18 @@ new IntersectionObserver(
   ([entry]) => document.querySelector("header").classList.toggle("condensed", !entry.isIntersecting),
   { threshold: 0 }
 ).observe(document.getElementById("scroll-sentinel"));
+
+let lastScrollY = window.scrollY;
+window.addEventListener("scroll", () => {
+  const currentScrollY = window.scrollY;
+  const header = document.querySelector("header");
+  if (currentScrollY > lastScrollY && currentScrollY > 60) {
+    header.classList.add("header-hidden");
+  } else {
+    header.classList.remove("header-hidden");
+  }
+  lastScrollY = currentScrollY;
+}, { passive: true });
 
 document.getElementById("search").addEventListener("input", applyFilters);
 document.getElementById("sort").addEventListener("change", applyFilters);
