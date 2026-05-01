@@ -495,6 +495,7 @@
           <option value="price-desc">Price High–Low</option>
           <option value="price-asc">Price Low–High</option>
           <option value="beats-desc">Most Beats</option>
+          <option value="most-played">Most Played</option>
         </select>
       </div>
     </div>
@@ -889,16 +890,29 @@ async function fetchEdhrecCard(name) {
 }
 
 async function loadEdhrecData() {
+  const bar = document.getElementById("loading-bar");
+  const text = document.getElementById("loading-text");
+  const loadingEl = document.getElementById("loading");
+  const total = nameList.length;
+  let done = 0;
   for (const name of nameList) {
-    if (edhrecData[name] !== undefined) continue;
+    if (edhrecData[name] !== undefined) { done++; continue; }
     const result = await fetchEdhrecCard(name);
-    edhrecData[name] = result; // null if failed/missing
-    // Update any rendered anchors for this card
+    edhrecData[name] = result;
+    done++;
     document.querySelectorAll(`[data-edhrec="${CSS.escape(name)}"]`).forEach(el => {
       el.textContent = result ? `${result.pct}% of ${fmtDecks(result.potentialDecks)} decks` : "EDHRec";
     });
-    if (document.getElementById("underplayed-filter")?.checked) applyFilters();
+    if (loadingEl.style.display !== "none") {
+      bar.style.width = `${Math.round((done / total) * 100)}%`;
+      text.textContent = `Loading EDHRec data… (${done}/${total})`;
+    }
     await new Promise(r => setTimeout(r, 80));
+  }
+  edhrecLoaded = true;
+  if (loadingEl.style.display !== "none") {
+    loadingEl.style.display = "none";
+    applyFilters();
   }
 }
 
@@ -1037,7 +1051,7 @@ function cardEl(name, isMain) {
   edhrecA.dataset.edhrec = name;
   const ed = edhrecData[name];
   edhrecA.textContent = ed
-    ? `${ed.pct}% of ${ed.potentialDecks.toLocaleString()} decks`
+    ? `${ed.pct}% of ${fmtDecks(ed.potentialDecks)} decks`
     : (edhrecData[name] === null ? "EDHRec" : "EDHRec…");
   linksDiv.appendChild(edhrecA);
   div.appendChild(linksDiv);
@@ -1078,6 +1092,7 @@ function renderGroup(group) {
 
 // ── Filter & sort ─────────────────────────────────────────────────────────────
 let currentGroups = [...groupList];
+let edhrecLoaded = false;
 
 function applyFilters() {
   const query = document.getElementById("search").value.toLowerCase().trim();
@@ -1085,6 +1100,15 @@ function applyFilters() {
 
   const underplayedOnly = document.getElementById("underplayed-filter").checked;
   const budgetOnly = document.getElementById("budget-filter").checked;
+
+  if (!edhrecLoaded && (sortVal === "most-played" || underplayedOnly)) {
+    const done = nameList.filter(n => edhrecData[n] !== undefined).length;
+    document.getElementById("loading-bar").style.width = `${Math.round((done / nameList.length) * 100)}%`;
+    document.getElementById("loading-text").textContent = `Loading EDHRec data… (${done}/${nameList.length})`;
+    document.getElementById("loading").style.display = "flex";
+    return;
+  }
+  document.getElementById("loading").style.display = "none";
 
   currentGroups = groupList.filter(g => {
     if (query && !g.better.toLowerCase().includes(query) &&
@@ -1113,6 +1137,10 @@ function applyFilters() {
       return pa - pb;
     }
     if (sortVal === "beats-desc") return b.worse.length - a.worse.length;
+    if (sortVal === "most-played") {
+      const maxDecks = g => Math.max(...g.worse.map(w => edhrecData[w]?.numDecks ?? 0));
+      return maxDecks(b) - maxDecks(a);
+    }
     return 0;
   });
 
