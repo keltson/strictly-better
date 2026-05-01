@@ -531,7 +531,7 @@
 
 <div id="loading">
   <div class="ring"></div>
-  <div id="loading-text">Loading card data from Scryfall…</div>
+  <div id="loading-text">Loading…</div>
   <div id="loading-progress"><div id="loading-bar"></div></div>
 </div>
 
@@ -591,342 +591,9 @@
 </footer>
 
 <script>
-// ── Raw CSV data ──────────────────────────────────────────────────────────────
-const RAW = [
-  ["Aang's Iceberg","Banishing Light"],
-  ["Abstruse Appropriation","Utter End"],
-  ["Abundant Countryside","Ancient Ziggurat"],
-  ["Admiral's Order","Cancel"],
-  ["Airship Crash","Broken Wings"],
-  ["Alhammarret's Archive","Boon Reflection"],
-  ["Amazing Acrobatics","Cancel"],
-  ["Arcane Sanctum","Submerged Boneyard"],
-  ["Arid Archway","Guildless Commons"],
-  ["Big Apple, 3 a.m.","Uncharted Haven"],
-  ["Big Score","Unexpected Windfall"],
-  ["Big Score","Pirate's Pillage"],
-  ["Bitter Reunion","Tormenting Voice"],
-  ["Black Dragon Gate","Submerged Boneyard"],
-  ["Black Dragon Gate","Foul Orchard"],
-  ["Black Dragon Gate","Rakdos Guildgate"],
-  ["Black Dragon Gate","Dimir Guildgate"],
-  ["Black Dragon Gate","Orzhov Guildgate"],
-  ["Black Dragon Gate","Golgari Guildgate"],
-  ["Blazemire Verge","Tainted Peak"],
-  ["Bloody Betrayal","Act of Treason"],
-  ["Blooming Marsh","Foul Orchard"],
-  ["Botanical Sanctum","Woodland Stream"],
-  ["Bounce Off","Unsummon"],
-  ["Brainsurge","Quick Study"],
-  ["Brass Infiniscope","Sisay's Ring"],
-  ["Breathe Your Last","Hero's Downfall"],
-  ["Breathe Your Last","Murder"],
-  ["Breeding Pool","Woodland Stream"],
-  ["Broken Concentration","Cancel"],
-  ["Bronze Walrus","Alloy Myr"],
-  ["Bulk Up","Unleash Fury"],
-  ["Burst Lightning","Shock"],
-  ["Calciform Pools","Mage-Ring Network"],
-  ["Canopy Vista","Radiant Grove"],
-  ["Canyon Slough","Polluted Mire"],
-  ["Canyon Slough","Geothermal Bog"],
-  ["Canyon Slough","Smoldering Crater"],
-  ["Cavern of Souls","Unclaimed Territory"],
-  ["Chocobo Racetrack","Zendikar's Roil"],
-  ["Choked Estuary","Submerged Boneyard"],
-  ["Citadel Gate","Boros Guildgate"],
-  ["Citadel Gate","Selesnya Guildgate"],
-  ["Citadel Gate","Orzhov Guildgate"],
-  ["Citadel Gate","Azorius Guildgate"],
-  ["Cliffgate","Rakdos Guildgate"],
-  ["Cliffgate","Boros Guildgate"],
-  ["Cliffgate","Izzet Guildgate"],
-  ["Cliffgate","Gruul Guildgate"],
-  ["Coldsteel Heart","Charcoal Diamond"],
-  ["Coldsteel Heart","Marble Diamond"],
-  ["Coldsteel Heart","Sky Diamond"],
-  ["Coldsteel Heart","Fire Diamond"],
-  ["Coldsteel Heart","Moss Diamond"],
-  ["Collective Resistance","Naturalize"],
-  ["Corrupted Conviction","Altar's Reap"],
-  ["Costly Plunder","Altar's Reap"],
-  ["Counterspell","Wizard's Retort"],
-  ["Creeping Tar Pit","Submerged Boneyard"],
-  ["Crumbling Necropolis","Submerged Boneyard"],
-  ["Crystal Grotto","Zhalfirin Void"],
-  ["Darkslick Shores","Submerged Boneyard"],
-  ["Demand Answers","Tormenting Voice"],
-  ["Demand Answers","Thrill of Possibility"],
-  ["Desperate Ritual","Pyretic Ritual"],
-  ["Dimir Guildgate","Submerged Boneyard"],
-  ["Disallow","Voidslime"],
-  ["Dismal Backwater","Submerged Boneyard"],
-  ["Dissolve","Cancel"],
-  ["Drowned Catacomb","Submerged Boneyard"],
-  ["Drown in Dreams","Stroke of Genius"],
-  ["Eaten by Piranhas","Frogify"],
-  ["Eclipsed Steppe","Sunlit Marsh"],
-  ["Edgewall Inn","Uncharted Haven"],
-  ["Elfsworn Giant","Sporemound"],
-  ["Encroaching Dragonstorm","Explosive Vegetation"],
-  ["End the Festivities","Blazing Volley"],
-  ["Enduring Courage","Ogre Battledriver"],
-  ["Entish Restoration","Roiling Regrowth"],
-  ["Escape Tunnel","Terramorphic Expanse"],
-  ["Escape Tunnel","Evolving Wilds"],
-  ["Eusocial Engineering","Zendikar's Roil"],
-  ["Eviscerator's Insight","Costly Plunder"],
-  ["Eviscerator's Insight","Altar's Reap"],
-  ["Experimental Augury","Steady Progress"],
-  ["Experimental Augury","Contentious Plan"],
-  ["Fading Hope","Unsummon"],
-  ["Fanatical Offering","Costly Plunder"],
-  ["Fanatical Offering","Altar's Reap"],
-  ["Feather of Flight","Angelic Gift"],
-  ["Feed the Cycle","Murder"],
-  ["Feed the Cycle","Hero's Downfall"],
-  ["Feed the Infection","Ambition's Cost"],
-  ["Felidar Retreat","Zendikar's Roil"],
-  ["Festering Gulch","Foul Orchard"],
-  ["Fetid Pools","Remote Isle"],
-  ["Fetid Pools","Contaminated Aquifer"],
-  ["Final Fortune","Last Chance"],
-  ["Flare of Denial","Cancel"],
-  ["Floodfarm Verge","Nimbus Maze"],
-  ["Foolish Fate","Murder"],
-  ["Forbid","Cancel"],
-  ["Forbidden Friendship","Krenko's Command"],
-  ["Forbidden Friendship","Dragon Fodder"],
-  ["Fountainport Bell","Traveler's Amulet"],
-  ["Frontier Bivouac","Woodland Stream"],
-  ["Frost Marsh","Submerged Boneyard"],
-  ["Furnace Reins","Act of Treason"],
-  ["Gilt-Leaf Palace","Foul Orchard"],
-  ["Gloomlake Verge","Tainted Isle"],
-  ["Glorious Gale","Essence Scatter"],
-  ["Goatnap","Act of Treason"],
-  ["Golgari Guildgate","Foul Orchard"],
-  ["Grab the Prize","Tormenting Voice"],
-  ["Great Train Heist","Relentless Assault"],
-  ["Gudul Lurker","Triton Shorestalker"],
-  ["Gudul Lurker","Mist-Cloaked Herald"],
-  ["Haste Magic","Blazing Crescendo"],
-  ["Hedron Archive","Sisay's Ring"],
-  ["Hellspur Posse Boss","Beetleback Chief"],
-  ["Heritage Reclamation","Return to Nature"],
-  ["Heritage Reclamation","Naturalize"],
-  ["Hero's Downfall","Murder"],
-  ["High Noon","Rule of Law"],
-  ["Hinterland Harbor","Woodland Stream"],
-  ["Hissing Quagmire","Foul Orchard"],
-  ["Ice Out","Cancel"],
-  ["Ichor Elixir","Sisay's Ring"],
-  ["Indatha Triome","Foul Orchard"],
-  ["Indatha Triome","Sandsteppe Citadel"],
-  ["Indebted Spirit","Doomed Traveler"],
-  ["Insidious Fungus","Caustic Caterpillar"],
-  ["Invasion of Zendikar // Awakened Skyclave","Explosive Vegetation"],
-  ["Irrigated Farmland","Drifting Meadow"],
-  ["Irrigated Farmland","Remote Isle"],
-  ["Irrigated Farmland","Idyllic Beachfront"],
-  ["Jungle Hollow","Foul Orchard"],
-  ["Jwar Isle Refuge","Submerged Boneyard"],
-  ["Kellan, the Fae-Blooded // Birthright Boon","Open the Armory"],
-  ["Ketria Triome","Woodland Stream"],
-  ["Kitchen","Woodland Stream"],
-  ["Lakeside Shack","Woodland Stream"],
-  ["Legion Leadership // Legion Stronghold","Unleash Fury"],
-  ["Lightning Bolt","Lightning Strike"],
-  ["Lightning Bolt","Shock"],
-  ["Lorehold Campus","Boros Guildgate"],
-  ["Lounge","Foul Orchard"],
-  ["Lumbering Falls","Woodland Stream"],
-  ["Lush Oasis","Woodland Stream"],
-  ["Mana Drain","Counterspell"],
-  ["Managorger Hydra","Taurean Mauler"],
-  ["Mana Sculpt","Cancel"],
-  ["Manor Gate","Simic Guildgate"],
-  ["Manor Gate","Golgari Guildgate"],
-  ["Manor Gate","Selesnya Guildgate"],
-  ["Manor Gate","Gruul Guildgate"],
-  ["Map the Frontier","Explosive Vegetation"],
-  ["Mastermind's Acquisition","Diabolic Tutor"],
-  ["Migration Path","Explosive Vegetation"],
-  ["Mirrorhall Mimic // Ghastly Mimicry","Clone"],
-  ["Molten Collapse","Dreadbore"],
-  ["Morphic Pool","Submerged Boneyard"],
-  ["Multiversal Passage","Uncharted Haven"],
-  ["Murky Sewer","Submerged Boneyard"],
-  ["Mystical Tutor","Personal Tutor"],
-  ["Mythos of Nethroi","Murder"],
-  ["Naga Fleshcrafter","Clone"],
-  ["Neutralize","Cancel"],
-  ["New Generation's Technique","Explosive Vegetation"],
-  ["Night Market","Uncharted Haven"],
-  ["Noggle the Mind","Frogify"],
-  ["Oasis Gardener","Alloy Myr"],
-  ["Ooze Spill","Cancel"],
-  ["Opulent Palace","Woodland Stream"],
-  ["Opulent Palace","Submerged Boneyard"],
-  ["Opulent Palace","Foul Orchard"],
-  ["Origin of Metalbending","Naturalize"],
-  ["Overgrown Tomb","Foul Orchard"],
-  ["Pack's Betrayal","Act of Treason"],
-  ["Path of the Schemer","Extract from Darkness"],
-  ["Perilous Snare","Banishing Light"],
-  ["Phyrexian Metamorph","Clone"],
-  ["Piercing Exhale","Bite Down"],
-  ["Play with Fire","Shock"],
-  ["Poison the Cup","Murder"],
-  ["Preordain","Serum Visions"],
-  ["Price of Loyalty","Act of Treason"],
-  ["Prismari Campus","Izzet Guildgate"],
-  ["Promising Vein","Bant Panorama"],
-  ["Promising Vein","Jund Panorama"],
-  ["Promising Vein","Naya Panorama"],
-  ["Psychic Paper","Trailblazer's Boots"],
-  ["Psychic Paper","Prowler's Helm"],
-  ["Qarsi Revenant","Vampire Nighthawk"],
-  ["Quandrix Campus","Woodland Stream"],
-  ["Quandrix Campus","Simic Guildgate"],
-  ["Radiant Summit","Sacred Peaks"],
-  ["Raugrin Triome","Mystic Monastery"],
-  ["Reckoner's Bargain","Altar's Reap"],
-  ["Reconnaissance Mission","Coastal Piracy"],
-  ["Refute","Cancel"],
-  ["Relic of Sauron","Sisay's Ring"],
-  ["Restart Sequence","Zombify"],
-  ["Return from the Wilds","Farhaven Elf"],
-  ["Return the Favor","Wild Ricochet"],
-  ["Return to Nature","Naturalize"],
-  ["Reverse the Polarity","Cancel"],
-  ["Rising of the Day","Fervor"],
-  ["Romantic Rendezvous","Tormenting Voice"],
-  ["Ruin-Lurker Bat","Healer's Hawk"],
-  ["Rumble Arena","Zhalfirin Void"],
-  ["Rumble Arena","Crystal Grotto"],
-  ["Sandsteppe Citadel","Foul Orchard"],
-  ["Saruman's Trickery","Cancel"],
-  ["Savage Lands","Foul Orchard"],
-  ["Savai Triome","Nomad Outpost"],
-  ["Scattered Groves","Drifting Meadow"],
-  ["Scattered Groves","Radiant Grove"],
-  ["Scatter to the Winds","Cancel"],
-  ["Scorched Geyser","Molten Tributary"],
-  ["Scuttlemutt","Alloy Myr"],
-  ["Sea Gate","Azorius Guildgate"],
-  ["Sea Gate","Submerged Boneyard"],
-  ["Sea Gate","Woodland Stream"],
-  ["Sea Gate","Dimir Guildgate"],
-  ["Sea Gate","Simic Guildgate"],
-  ["Sea Gate","Izzet Guildgate"],
-  ["Seaside Citadel","Woodland Stream"],
-  ["Secluded Courtyard","Unclaimed Territory"],
-  ["Secluded Glen","Submerged Boneyard"],
-  ["Secluded Starforge","Urza's Factory"],
-  ["Secret Passage","Submerged Boneyard"],
-  ["Seedship Impact","Naturalize"],
-  ["Sheltered Thicket","Wooded Ridgeline"],
-  ["Sheltered Thicket","Smoldering Crater"],
-  ["Shire Terrace","Naya Panorama"],
-  ["Shire Terrace","Jund Panorama"],
-  ["Shire Terrace","Bant Panorama"],
-  ["Shower of Arrows","Broken Wings"],
-  ["Silverquill Campus","Orzhov Guildgate"],
-  ["Silver Scrutiny","Mind Spring"],
-  ["Simic Guildgate","Woodland Stream"],
-  ["Sinister Sabotage","Cancel"],
-  ["Skyclave Relic","Darksteel Ingot"],
-  ["Skyshroud Claim","Ranger's Path"],
-  ["Slither Blade","Mist-Cloaked Herald"],
-  ["Sodden Verdure","Tangled Islet"],
-  ["Soured Springs","Submerged Boneyard"],
-  ["Spell Snuff","Cancel"],
-  ["Spider-Man No More","Frogify"],
-  ["Spin Out","Murder"],
-  ["Splinter's Technique","Diabolic Tutor"],
-  ["Stoic Rebuttal","Cancel"],
-  ["Stonespeaker Crystal","Sisay's Ring"],
-  ["Strangled Cemetery","Foul Orchard"],
-  ["Sunken Citadel","Uncharted Haven"],
-  ["Sunken Hollow","Submerged Boneyard"],
-  ["Systems Override","Act of Treason"],
-  ["Taiga","Stomping Ground"],
-  ["Taiga","Gruul Guildgate"],
-  ["Take for a Ride","Act of Treason"],
-  ["Tarnation Vista","Uncharted Haven"],
-  ["Tear Asunder","Naturalize"],
-  ["Tectonic Hazard","Blazing Volley"],
-  ["Temple of Deceit","Submerged Boneyard"],
-  ["Temple of Malady","Foul Orchard"],
-  ["Temple of Mystery","Woodland Stream"],
-  ["Thornwood Falls","Woodland Stream"],
-  ["Thought Collapse","Cancel"],
-  ["Thran Dynamo","Sisay's Ring"],
-  ["Three Steps Ahead","Cancel"],
-  ["Thrill of Possibility","Tormenting Voice"],
-  ["Thriving Grove","Foul Orchard"],
-  ["Thriving Grove","Woodland Stream"],
-  ["Thriving Isle","Woodland Stream"],
-  ["Thriving Isle","Submerged Boneyard"],
-  ["Thriving Moor","Submerged Boneyard"],
-  ["Thriving Moor","Foul Orchard"],
-  ["Town Greeter","Satyr Wayfinder"],
-  ["Twist Reality","Cancel"],
-  ["Undergrowth","Fog"],
-  ["Unexpected Request","Act of Treason"],
-  ["Unravel","Cancel"],
-  ["Urban Retreat","Seaside Citadel"],
-  ["Urban Retreat","Woodland Stream"],
-  ["Utter Insignificance","Eaten by Piranhas"],
-  ["Vampiric Tutor","Imperial Seal"],
-  ["Vapor Snag","Unsummon"],
-  ["Vastwood Surge","Explosive Vegetation"],
-  ["Veil of Summer","Autumn's Veil"],
-  ["Vengeful Possession","Act of Treason"],
-  ["Vernal Fen","Haunted Mire"],
-  ["Village Rites","Altar's Reap"],
-  ["Waterfront District","Submerged Boneyard"],
-  ["Watery Grave","Submerged Boneyard"],
-  ["Wild Slash","Shock"],
-  ["Wild Unraveling","Cancel"],
-  ["Wilt","Naturalize"],
-  ["Winding Way","Mulch"],
-  ["Witherbloom Campus","Golgari Guildgate"],
-  ["Witherbloom Campus","Foul Orchard"],
-  ["Witness Protection","Frogify"],
-  ["Wizard's Retort","Cancel"],
-  ["Woodland Cemetery","Foul Orchard"],
-  ["Word of Undoing","Unsummon"],
-  ["Words of Wisdom","Vision Skeins"],
-  ["Worldly Tutor","Sylvan Tutor"],
-  ["World Map","Traveler's Amulet"],
-  ["Wrath of God","Day of Judgment"],
-  ["You Find the Villains' Lair","Cancel"],
-  ["Zagoth Triome","Woodland Stream"],
-  ["Zagoth Triome","Submerged Boneyard"],
-  ["Zagoth Triome","Opulent Palace"],
-  ["Zagoth Triome","Foul Orchard"],
-];
-
-// ── Group by Column A ─────────────────────────────────────────────────────────
-const groups = {};
-for (const [better, worse] of RAW) {
-  if (!groups[better]) groups[better] = new Set();
-  groups[better].add(worse);
-}
-const groupList = Object.entries(groups).map(([better, worseSet]) => ({
-  better,
-  worse: [...worseSet],
-}));
-
-// ── Collect all unique card names ────────────────────────────────────────────
-const allNames = new Set();
-for (const { better, worse } of groupList) {
-  allNames.add(better);
-  for (const w of worse) allNames.add(w);
-}
-const nameList = [...allNames];
+// ── Card data (populated at init from card-pairs.json / card-cache.json) ──────
+let groupList = [];
+let nameList = [];
 
 // ── Scryfall data store ───────────────────────────────────────────────────────
 const cardData = {}; // name -> { image, price, priceLabel, foil, url, tcgplayer }
@@ -985,17 +652,6 @@ async function loadEdhrecData() {
   }
 }
 
-async function fetchBatch(names) {
-  const identifiers = names.map(name => ({ name }));
-  const res = await fetch("https://api.scryfall.com/cards/collection", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ identifiers }),
-  });
-  const json = await res.json();
-  return json.data || [];
-}
-
 function getImageUri(card) {
   if (card.image_uris) return card.image_uris.normal;
   if (card.card_faces && card.card_faces[0].image_uris)
@@ -1011,62 +667,100 @@ function getPriceLabel(card) {
   return { label: "—", value: null, foil: false };
 }
 
-async function loadAllCards() {
-  const bar = document.getElementById("loading-bar");
-  const text = document.getElementById("loading-text");
+// ── Price caching (localStorage, 24h TTL) ────────────────────────────────────
+const PRICE_CACHE_KEY = 'sb-prices-v1';
+const PRICE_CACHE_TTL = 86_400_000;
+
+function loadCachedPrices() {
+  try {
+    const raw = localStorage.getItem(PRICE_CACHE_KEY);
+    if (!raw) return null;
+    const { ts, prices } = JSON.parse(raw);
+    if (Date.now() - ts > PRICE_CACHE_TTL) return null;
+    return prices;
+  } catch {
+    return null;
+  }
+}
+
+function savePriceCache(prices) {
+  try {
+    localStorage.setItem(PRICE_CACHE_KEY, JSON.stringify({ ts: Date.now(), prices }));
+  } catch { /* quota exceeded — skip */ }
+}
+
+// Scryfall collection API rejects '// back face' DFC names — use front face only
+function scryfallName(name) {
+  return name.includes(' // ') ? name.split(' // ')[0] : name;
+}
+
+async function loadPrices() {
   const BATCH = 75;
   const chunks = [];
   for (let i = 0; i < nameList.length; i += BATCH)
     chunks.push(nameList.slice(i, i + BATCH));
 
-  let done = 0;
-  for (const chunk of chunks) {
-    text.textContent = `Loading cards… (${done}/${nameList.length})`;
+  const newPrices = {};
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    // Map scryfall lookup name → original name for DFCs
+    const lookup = Object.fromEntries(chunk.map(n => [scryfallName(n), n]));
     try {
-      const cards = await fetchBatch(chunk);
-      for (const card of cards) {
-        const name = card.name;
-        const price = getPriceLabel(card);
-        // Combine oracle/type from both faces of DFC
-        const faces = card.card_faces;
-        const oracle = faces
-          ? faces.map(f => f.oracle_text ?? '').join('\n').toLowerCase()
-          : (card.oracle_text ?? '').toLowerCase();
-        const type = faces
-          ? faces.map(f => f.type_line ?? card.type_line ?? '').join(' // ').toLowerCase()
-          : (card.type_line ?? '').toLowerCase();
-        const manaCost = (faces ? faces[0]?.mana_cost : card.mana_cost) ?? '';
-        cardData[name] = {
-          name,
-          image: getImageUri(card),
-          price: price.value,
-          priceLabel: price.label,
-          foil: price.foil,
-          url: card.scryfall_uri,
-          tcgplayer: card.purchase_uris?.tcgplayer ?? null,
-          oracle,
-          type,
-          colors: card.colors ?? [],
-          colorIdentity: card.color_identity ?? [],
-          cmc: card.cmc ?? 0,
-          rarity: card.rarity ?? '',
-          keywords: (card.keywords ?? []).map(k => k.toLowerCase()),
-          legalities: card.legalities ?? {},
-          power: card.power ?? null,
-          toughness: card.toughness ?? null,
-          set: card.set ?? '',
-          manaCost: manaCost.toLowerCase(),
-        };
+      const identifiers = Object.keys(lookup).map(name => ({ name }));
+      const res = await fetch("https://api.scryfall.com/cards/collection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifiers }),
+      });
+      const json = await res.json();
+      for (const card of (json.data || [])) {
+        const name = lookup[card.name] ?? card.name;
+        const { value, label, foil } = getPriceLabel(card);
+        const p = { price: value, priceLabel: label, foil, tcgplayer: card.purchase_uris?.tcgplayer ?? null };
+        newPrices[name] = p;
+        if (!cardData[name]) {
+          // Card missing from cache — populate static fields from Scryfall as fallback
+          const faces = card.card_faces;
+          cardData[name] = {
+            name,
+            image: getImageUri(card),
+            url: card.scryfall_uri,
+            oracle: (faces ? faces.map(f => f.oracle_text ?? '').join('\n') : (card.oracle_text ?? '')).toLowerCase(),
+            type: (faces ? faces.map(f => f.type_line ?? card.type_line ?? '').join(' // ') : (card.type_line ?? '')).toLowerCase(),
+            colors: card.colors ?? [],
+            colorIdentity: card.color_identity ?? [],
+            cmc: card.cmc ?? 0,
+            rarity: card.rarity ?? '',
+            keywords: (card.keywords ?? []).map(k => k.toLowerCase()),
+            legalities: card.legalities ?? {},
+            power: card.power ?? null,
+            toughness: card.toughness ?? null,
+            set: card.set ?? '',
+            manaCost: ((faces ? faces[0]?.mana_cost : card.mana_cost) ?? '').toLowerCase(),
+          };
+        }
+        Object.assign(cardData[name], p);
+        // Update any already-rendered price elements for this card
+        document.querySelectorAll(`[data-price="${CSS.escape(name)}"]`).forEach(el => {
+          el.className = "card-price" + (p.foil ? " foil" : p.price === null ? " na" : "");
+          el.textContent = p.priceLabel;
+          if (p.tcgplayer && p.price !== null) {
+            el.title = "View on TCGPlayer";
+            el.onclick = () => window.open(p.tcgplayer, "_blank");
+          }
+        });
       }
     } catch (e) {
-      console.warn("Scryfall batch failed:", e);
+      console.warn("Scryfall price batch failed:", e);
     }
-    done = Math.min(done + BATCH, nameList.length);
-    bar.style.width = `${Math.round((done / nameList.length) * 100)}%`;
-    // Polite delay between batches
-    if (chunks.indexOf(chunk) < chunks.length - 1)
+    if (i < chunks.length - 1)
       await new Promise(r => setTimeout(r, 120));
   }
+
+  savePriceCache(newPrices);
+  // Re-filter/sort now that prices are available
+  applyFilters();
 }
 
 // ── Popup on hover ────────────────────────────────────────────────────────────
@@ -1120,6 +814,7 @@ function cardEl(name, isMain) {
   div.appendChild(nameDiv);
 
   const priceDiv = document.createElement("div");
+  priceDiv.dataset.price = name;
   if (data) {
     priceDiv.className = "card-price" + (data.foil ? " foil" : data.price === null ? " na" : "");
     priceDiv.textContent = data.priceLabel;
@@ -1359,7 +1054,7 @@ function clearSearch() {
 }
 
 // ── Filter & sort ─────────────────────────────────────────────────────────────
-let currentGroups = [...groupList];
+let currentGroups = [];
 let edhrecLoaded = false;
 
 function applyFilters() {
@@ -1477,10 +1172,68 @@ document.getElementById("budget-filter").addEventListener("change", applyFilters
 document.getElementById("underplayed-filter").addEventListener("change", applyFilters);
 
 (async () => {
-  await loadAllCards();
+  const text = document.getElementById("loading-text");
+  const bar = document.getElementById("loading-bar");
+  text.textContent = "Loading card data…";
+
+  let pairsData, cacheData;
+  try {
+    [pairsData, cacheData] = await Promise.all([
+      fetch('./card-pairs.json').then(r => r.json()),
+      fetch('./card-cache.json').then(r => r.json()),
+    ]);
+  } catch (e) {
+    text.textContent = "Failed to load card data. Please refresh.";
+    console.error(e);
+    return;
+  }
+
+  // Build groups from pairs
+  const rawGroups = {};
+  for (const [better, ...worse] of pairsData) {
+    if (!rawGroups[better]) rawGroups[better] = new Set();
+    for (const w of worse) rawGroups[better].add(w);
+  }
+  groupList = Object.entries(rawGroups).map(([better, worseSet]) => ({
+    better,
+    worse: [...worseSet],
+  }));
+
+  // Collect all unique names
+  const allNames = new Set();
+  for (const { better, worse } of groupList) {
+    allNames.add(better);
+    for (const w of worse) allNames.add(w);
+  }
+  nameList = [...allNames];
+
+  // Populate cardData with static metadata from cache
+  const staticCards = cacheData.cards ?? {};
+  for (const name of nameList) {
+    const c = staticCards[name];
+    if (c) {
+      cardData[name] = {
+        ...c,
+        price: null,
+        priceLabel: "—",
+        foil: false,
+        tcgplayer: null,
+      };
+    }
+  }
+
+  // Apply cached prices before first render so they're visible immediately
+  const cachedPrices = loadCachedPrices();
+  if (cachedPrices) {
+    for (const [name, p] of Object.entries(cachedPrices)) {
+      if (cardData[name]) Object.assign(cardData[name], p);
+    }
+  }
+
   document.getElementById("loading").style.display = "none";
   applyFilters();
   loadEdhrecData(); // runs in background, updates anchors as data arrives
+  if (!cachedPrices) loadPrices(); // fetch prices in background if not cached
 })();
 </script>
 </body>
