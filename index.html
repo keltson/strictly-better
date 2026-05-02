@@ -622,7 +622,6 @@
     display: none;
     background: rgba(74, 222, 128, 0.15);
     border: 1px solid rgba(74, 222, 128, 0.4);
-    border-left: none;
     border-radius: 0 8px 8px 0;
     color: #4ade80;
     font-size: 0.9rem;
@@ -703,7 +702,7 @@
   .filter-menu label:hover { background: rgba(255,255,255,0.06); }
 
   .filter-menu input[type="checkbox"] {
-    accent-color: #4ade80;
+    accent-color: #888;
     width: 14px;
     height: 14px;
     flex-shrink: 0;
@@ -768,16 +767,16 @@
       </div>
       <button id="search-load-btn">Load</button>
     </div>
-    <div class="filter-wrap" id="filter-wrap">
-      <button class="filter-btn" id="filter-btn">Filter</button>
-      <div class="filter-menu" id="filter-menu">
-        <label><input type="checkbox" id="budget-filter"> Budget upgrades</label>
-        <label><input type="checkbox" id="underplayed-filter"> Underplayed</label>
-        <label><input type="checkbox" id="better-only-filter"> Better cards only</label>
-      </div>
-    </div>
     <div class="controls-break"></div>
     <div class="controls-row-2">
+      <div class="filter-wrap" id="filter-wrap">
+        <button class="filter-btn" id="filter-btn">Filter</button>
+        <div class="filter-menu" id="filter-menu">
+          <label><input type="checkbox" id="budget-filter"> Budget upgrades</label>
+          <label><input type="checkbox" id="underplayed-filter"> Underplayed</label>
+          <label><input type="checkbox" id="better-only-filter"> Search better cards only</label>
+        </div>
+      </div>
       <div class="sort-wrap">
         <label class="sort-label">Sort by</label>
         <select id="sort">
@@ -1204,7 +1203,7 @@ function renderGroup(group) {
   divider.className = "divider";
   divider.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M5 12h14M12 5l7 7-7 7"/>
-  </svg><span>better<br>than</span>`;
+  </svg><span>better <br>than</span>`;
   layout.appendChild(divider);
 
   const worseWrap = document.createElement("div");
