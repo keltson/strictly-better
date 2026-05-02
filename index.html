@@ -674,7 +674,7 @@
   .filter-menu {
     display: none;
     position: absolute;
-    right: 0;
+    left: 0;
     top: calc(100% + 6px);
     background: #2a2a2a;
     border: 1px solid rgba(255,255,255,0.18);
@@ -769,14 +769,6 @@
     </div>
     <div class="controls-break"></div>
     <div class="controls-row-2">
-      <div class="filter-wrap" id="filter-wrap">
-        <button class="filter-btn" id="filter-btn">Filter</button>
-        <div class="filter-menu" id="filter-menu">
-          <label><input type="checkbox" id="budget-filter"> Budget upgrades</label>
-          <label><input type="checkbox" id="underplayed-filter"> Underplayed</label>
-          <label><input type="checkbox" id="better-only-filter"> Search better cards only</label>
-        </div>
-      </div>
       <div class="sort-wrap">
         <label class="sort-label">Sort by</label>
         <select id="sort">
@@ -786,6 +778,14 @@
           <option value="price-asc">Price low–high</option>
           <option value="most-played">Most played</option>
         </select>
+      </div>
+      <div class="filter-wrap" id="filter-wrap">
+        <button class="filter-btn" id="filter-btn">Filter</button>
+        <div class="filter-menu" id="filter-menu">
+          <label><input type="checkbox" id="budget-filter"> Budget upgrades</label>
+          <label><input type="checkbox" id="underplayed-filter"> Underplayed</label>
+          <label><input type="checkbox" id="better-only-filter"> Search better cards only</label>
+        </div>
       </div>
       <div id="decklist-badge"><span id="decklist-badge-text"></span><button id="decklist-badge-clear">✕</button></div>
       <div class="stat-badge" style="margin-left:auto">Showing <span id="results-count">—</span> better cards</div>
