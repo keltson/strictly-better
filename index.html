@@ -122,7 +122,7 @@
     width: 100%;
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 0 8px 8px 0;
+    border-radius: 8px;
     color: #e0e0e0;
     font-size: 0.95rem;
     padding: 9px 36px 9px 14px;
@@ -627,6 +627,90 @@
     min-width: 90px;
     text-align: center;
   }
+
+  /* ── Decklist row ─────────────────────────────────────────────────────────── */
+  .decklist-row {
+    flex-basis: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 6px 0;
+  }
+
+  .decklist-input-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .decklist-input-wrap input {
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    padding: 9px 36px 9px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .decklist-input-wrap input:focus { border-color: #999; }
+
+  .decklist-input-wrap input.active {
+    border-color: rgba(74, 222, 128, 0.5);
+  }
+
+  #decklist-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    font-size: 1rem;
+    display: none;
+  }
+
+  #decklist-load-btn {
+    background: rgba(74, 222, 128, 0.12);
+    border: 1px solid rgba(74, 222, 128, 0.35);
+    border-radius: 8px;
+    color: #4ade80;
+    font-size: 0.9rem;
+    padding: 9px 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  #decklist-load-btn:hover {
+    background: rgba(74, 222, 128, 0.22);
+    border-color: rgba(74, 222, 128, 0.55);
+  }
+
+  .decklist-status {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+
+  .decklist-status.loading { color: rgba(255,255,255,0.45); }
+  .decklist-status.success { color: #4ade80; }
+  .decklist-status.error   { color: #f87171; }
+
+  /* ── In-decklist card highlight ───────────────────────────────────────────── */
+  .card-item.in-decklist .card-img-wrap {
+    border-radius: 8px;
+    box-shadow: 0 0 0 3px #4ade80, 0 0 14px rgba(74, 222, 128, 0.35);
+  }
+
+  .card-item.in-decklist .card-name {
+    color: #4ade80;
+  }
 </style>
 </head>
 <body>
@@ -643,11 +727,6 @@
   <div class="h1-wrap"><h1>Strictly Better Commander Cards</h1></div>
   <div class="controls">
     <div class="search-group">
-      <select id="search-scope">
-        <option value="all">All cards</option>
-        <option value="better">Better cards</option>
-        <option value="worse">Worse cards</option>
-      </select>
       <div class="search-wrap">
         <input type="text" id="search" placeholder="Search using Scryfall syntax">
         <button class="clear-btn" onclick="document.getElementById('search').value='';clearSearch()">✕</button>
@@ -663,6 +742,16 @@
 
         <option value="most-played">Most played</option>
       </select>
+    </div>
+    <div class="controls-break"></div>
+    <div class="decklist-row">
+      <label class="sort-label">Decklist</label>
+      <div class="decklist-input-wrap">
+        <input type="url" id="decklist-url" placeholder="Paste a Moxfield or Archidekt deck URL…">
+        <button id="decklist-clear">✕</button>
+      </div>
+      <button id="decklist-load-btn">Load</button>
+      <span id="decklist-status" class="decklist-status"></span>
     </div>
     <div class="controls-break"></div>
     <div class="controls-row-2">
@@ -730,6 +819,48 @@
 // ── Card data (populated at init from card-pairs.json / card-cache.json) ──────
 let groupList = [];
 let nameList = [];
+
+// ── Decklist state ────────────────────────────────────────────────────────────
+let decklistCards = new Set();
+
+async function loadDecklist() {
+  const urlInput = document.getElementById("decklist-url");
+  const statusEl = document.getElementById("decklist-status");
+  const clearBtn = document.getElementById("decklist-clear");
+  const url = urlInput.value.trim();
+  if (!url) return;
+
+  statusEl.textContent = "Loading…";
+  statusEl.className = "decklist-status loading";
+
+  try {
+    const res = await fetch(`/api/decklist?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "Unknown error");
+    decklistCards = new Set(data.cards.map(n => n.toLowerCase()));
+    statusEl.textContent = `${data.cards.length} cards loaded`;
+    statusEl.className = "decklist-status success";
+    urlInput.classList.add("active");
+    clearBtn.style.display = "block";
+  } catch (e) {
+    statusEl.textContent = `Error: ${e.message}`;
+    statusEl.className = "decklist-status error";
+    decklistCards = new Set();
+    urlInput.classList.remove("active");
+  }
+  applyFilters();
+}
+
+function clearDecklist() {
+  decklistCards = new Set();
+  const urlInput = document.getElementById("decklist-url");
+  urlInput.value = "";
+  urlInput.classList.remove("active");
+  document.getElementById("decklist-status").textContent = "";
+  document.getElementById("decklist-status").className = "decklist-status";
+  document.getElementById("decklist-clear").style.display = "none";
+  applyFilters();
+}
 
 // ── Scryfall data store ───────────────────────────────────────────────────────
 const cardData = {}; // name -> { image, price, priceLabel, foil, url, tcgplayer }
@@ -962,7 +1093,7 @@ function hidePopup() { popup.style.display = "none"; }
 function cardEl(name, isMain) {
   const data = cardData[name];
   const div = document.createElement("div");
-  div.className = "card-item" + (isMain ? " main-card" : "");
+  div.className = "card-item" + (isMain ? " main-card" : "") + (!isMain && decklistCards.has(name.toLowerCase()) ? " in-decklist" : "");
 
   const wrap = document.createElement("div");
   wrap.className = "card-img-wrap";
@@ -1271,7 +1402,6 @@ function applyFilters() {
   loadingSource = null;
   document.getElementById("loading").style.display = "none";
 
-  const scope = document.getElementById("search-scope").value;
   const parsedQuery = (rawQuery && isScryfallQuery(rawQuery))
     ? parseQueryString(rawQuery)
     : null;
@@ -1279,14 +1409,12 @@ function applyFilters() {
   currentGroups = groupList.filter(g => {
     if (rawQuery) {
       if (parsedQuery) {
-        if (!groupMatchesQuery(parsedQuery, g, scope)) return false;
+        if (!groupMatchesQuery(parsedQuery, g, 'all')) return false;
       } else {
         const bl = g.better.toLowerCase();
         const matchBetter = bl.includes(query);
         const matchWorse  = g.worse.some(w => w.toLowerCase().includes(query));
-        if (scope === 'better' && !matchBetter) return false;
-        if (scope === 'worse'  && !matchWorse)  return false;
-        if (scope === 'all'    && !matchBetter && !matchWorse) return false;
+        if (!matchBetter && !matchWorse) return false;
       }
     }
     if (budgetOnly) {
@@ -1299,6 +1427,9 @@ function applyFilters() {
       if (betterDecks === null) return false;
       const worseMax = Math.max(...g.worse.map(w => edhrecData[w]?.numDecks ?? 0));
       if (betterDecks >= worseMax) return false;
+    }
+    if (decklistCards.size > 0) {
+      if (!g.worse.some(w => decklistCards.has(w.toLowerCase()))) return false;
     }
     return true;
   });
@@ -1384,8 +1515,10 @@ document.getElementById("page-next").addEventListener("click", () => {
   const totalPages = Math.ceil(currentGroups.length / PAGE_SIZE);
   if (currentPage < totalPages - 1) { currentPage++; renderAll(); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
-document.getElementById("search-scope").addEventListener("change", applyFilters);
 document.getElementById("mobile-filter").addEventListener("change", applyFilters);
+document.getElementById("decklist-load-btn").addEventListener("click", loadDecklist);
+document.getElementById("decklist-clear").addEventListener("click", clearDecklist);
+document.getElementById("decklist-url").addEventListener("keydown", e => { if (e.key === "Enter") loadDecklist(); });
 document.getElementById("sort").addEventListener("change", applyFilters);
 document.getElementById("budget-filter").addEventListener("change", applyFilters);
 document.getElementById("underplayed-filter").addEventListener("change", applyFilters);
