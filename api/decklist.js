@@ -13,7 +13,7 @@ export default async function handler(req, res) {
       });
       if (!r.ok) return res.status(r.status).json({ error: 'Moxfield API error' });
       const data = await r.json();
-      for (const board of ['mainboard', 'commanders', 'companions', 'sideboard', 'maybeboard']) {
+      for (const board of ['mainboard', 'commanders']) {
         const b = data.boards?.[board]?.cards;
         if (b) for (const entry of Object.values(b)) {
           if (entry.card?.name) cards.push(entry.card.name);
@@ -26,6 +26,7 @@ export default async function handler(req, res) {
       if (!r.ok) return res.status(r.status).json({ error: 'Archidekt API error' });
       const data = await r.json();
       for (const entry of (data.cards ?? [])) {
+        if (entry.categories?.includes('Maybeboard')) continue;
         const name = entry.card?.oracleCard?.name;
         if (name) cards.push(name);
       }
