@@ -517,9 +517,6 @@
 
     #decklist-badge-text { display: none; }
     #decklist-badge::before { content: "Decklist"; }
-    #decklist-badge { padding: 9px 14px; font-size: 0.9rem; border-radius: 8px; }
-
-    .filter-menu { left: auto; right: 0; }
 
     label {
       font-size: 0.78rem;
@@ -774,6 +771,11 @@
 
   .card-item.in-decklist .card-name {
     color: #4ade80;
+  }
+
+  @media (max-width: 600px) {
+    #decklist-badge { padding: 9px 14px; font-size: 0.9rem; border-radius: 8px; }
+    .filter-menu { left: auto; right: 0; }
   }
 </style>
 </head>
