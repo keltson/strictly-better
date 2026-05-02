@@ -517,7 +517,9 @@
 
     #decklist-badge-text { display: none; }
     #decklist-badge::before { content: "Decklist"; }
-    #decklist-badge { padding: 9px 14px; font-size: 0.9rem; }
+    #decklist-badge { padding: 9px 14px; font-size: 0.9rem; border-radius: 8px; }
+
+    .filter-menu { left: auto; right: 0; }
 
     label {
       font-size: 0.78rem;
@@ -706,11 +708,35 @@
   .filter-menu label:hover { background: rgba(255,255,255,0.06); }
 
   .filter-menu input[type="checkbox"] {
-    accent-color: #888;
-    width: 14px;
-    height: 14px;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
     flex-shrink: 0;
     cursor: pointer;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 3px;
+    position: relative;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .filter-menu input[type="checkbox"]:checked {
+    background: #4ade80;
+    border-color: #4ade80;
+  }
+
+  .filter-menu input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 0px;
+    width: 5px;
+    height: 9px;
+    border: 2px solid #1a1a1a;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
   }
 
   /* ── Decklist loaded badge ────────────────────────────────────────────────── */
