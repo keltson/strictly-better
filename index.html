@@ -810,8 +810,10 @@ async function loadDecklist() {
     loadBtn.style.display = "none";
 
     const badge = document.getElementById("decklist-badge");
-    document.getElementById("decklist-badge-text").textContent = `${data.cards.length} decklist cards`;
+    const deckLabel = data.name ? `"${data.name}"` : "your decklist";
+    document.getElementById("decklist-badge-text").textContent = `Showing cards in ${deckLabel}`;
     badge.style.display = "flex";
+    document.querySelector(".stat-badge").style.display = "none";
   } catch (e) {
     loadBtn.textContent = "Load";
     loadBtn.disabled = false;
@@ -827,6 +829,7 @@ function clearDecklist() {
   const searchInput = document.getElementById("search");
   searchInput.classList.remove("decklist-active");
   document.getElementById("decklist-badge").style.display = "none";
+  document.querySelector(".stat-badge").style.display = "";
   applyFilters();
 }
 
