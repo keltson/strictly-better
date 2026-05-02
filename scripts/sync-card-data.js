@@ -46,6 +46,43 @@ const SEARCH_EDGES_QUERY = `
 `;
 
 // ---------------------------------------------------------------------------
+// Card field extraction (mirrors build-cache.js — keeps card-cache.json small)
+// ---------------------------------------------------------------------------
+
+function getImageUri(card) {
+  if (card.image_uris) return card.image_uris.normal;
+  if (card.card_faces?.[0]?.image_uris) return card.card_faces[0].image_uris.normal;
+  return null;
+}
+
+function extractStaticFields(card) {
+  const faces = card.card_faces;
+  return {
+    name: card.name,
+    image: getImageUri(card),
+    url: card.scryfall_uri,
+    oracle: (faces
+      ? faces.map(f => f.oracle_text ?? '').join('\n')
+      : (card.oracle_text ?? '')
+    ).toLowerCase(),
+    type: (faces
+      ? faces.map(f => f.type_line ?? card.type_line ?? '').join(' // ')
+      : (card.type_line ?? '')
+    ).toLowerCase(),
+    colors: card.colors ?? [],
+    colorIdentity: card.color_identity ?? [],
+    cmc: card.cmc ?? 0,
+    rarity: card.rarity ?? '',
+    keywords: (card.keywords ?? []).map(k => k.toLowerCase()),
+    legalities: card.legalities ?? {},
+    power: card.power ?? null,
+    toughness: card.toughness ?? null,
+    set: card.set ?? '',
+    manaCost: ((faces ? faces[0]?.mana_cost : card.mana_cost) ?? '').toLowerCase(),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // HTTP helpers (no external dependencies)
 // ---------------------------------------------------------------------------
 
@@ -289,11 +326,16 @@ async function fetchScryfallBatch(names) {
   return cards;
 }
 
-async function updateCache(pairs, existingCache) {
+async function updateCache(pairs, rawCache) {
   console.log('\n=== Step 2: Updating card-cache.json ===');
 
+  // Support both { cards: {...} } (build-cache.js format) and flat { CardName: {...} }
+  const existingCards = (rawCache.cards && typeof rawCache.cards === 'object')
+    ? rawCache.cards
+    : rawCache;
+
   const allNames  = collectUniqueNames(pairs);
-  const newNames  = allNames.filter(n => !(n in existingCache));
+  const newNames  = allNames.filter(n => !(n in existingCards));
   const skipCount = allNames.length - newNames.length;
 
   console.log(`  Total unique cards in pairs : ${allNames.length}`);
@@ -302,10 +344,10 @@ async function updateCache(pairs, existingCache) {
 
   if (newNames.length === 0) {
     console.log('  Nothing to fetch — cache is up to date.');
-    return { ...existingCache };
+    return { generated: new Date().toISOString(), count: Object.keys(existingCards).length, cards: existingCards };
   }
 
-  const merged = { ...existingCache };
+  const merged = { ...existingCards };
 
   const chunks = [];
   for (let i = 0; i < newNames.length; i += SCRYFALL_BATCH) {
@@ -325,33 +367,47 @@ async function updateCache(pairs, existingCache) {
 
     const count = Object.keys(batch).length;
     process.stdout.write(` ${count} returned\n`);
-    Object.assign(merged, batch);
+    for (const [name, card] of Object.entries(batch)) {
+      merged[name] = extractStaticFields(card);
+    }
     fetched += count;
 
     if (i < chunks.length - 1) await sleep(SCRYFALL_DELAY);
   }
 
   console.log(`  Fetched ${fetched} new cards. Cache total: ${Object.keys(merged).length}`);
-  return merged;
+  return { generated: new Date().toISOString(), count: Object.keys(merged).length, cards: merged };
 }
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
+// Convert flat [{better, worse}] pairs to grouped [[better, ...worse]] format
+// that index.html expects: for (const [better, ...worse] of pairsData)
+function groupPairs(flatPairs) {
+  const groups = new Map();
+  for (const { better, worse } of flatPairs) {
+    if (!groups.has(better)) groups.set(better, [better]);
+    groups.get(better).push(worse);
+  }
+  return [...groups.values()];
+}
+
 async function main() {
   // Step 1: fetch all pairs from Tagger
-  const pairs = await fetchAllPairs();
+  const flatPairs = await fetchAllPairs();
+  const groupedPairs = groupPairs(flatPairs);
 
-  writeJson(PAIRS_TMP, pairs);
-  console.log(`\n  Wrote ${pairs.length} pairs to ${path.basename(PAIRS_TMP)}`);
+  writeJson(PAIRS_TMP, groupedPairs);
+  console.log(`\n  Wrote ${groupedPairs.length} groups (${flatPairs.length} pairs) to ${path.basename(PAIRS_TMP)}`);
 
   // Step 2: update cache with any new cards
   const existingCache = loadJson(CACHE_PATH, {});
-  const updatedCache  = await updateCache(pairs, existingCache);
+  const updatedCache  = await updateCache(flatPairs, existingCache);
 
   writeJson(CACHE_TMP, updatedCache);
-  console.log(`  Wrote ${Object.keys(updatedCache).length} entries to ${path.basename(CACHE_TMP)}`);
+  console.log(`  Wrote ${updatedCache.count} entries to ${path.basename(CACHE_TMP)}`);
 
   // Atomic replace — only reached if both steps succeeded
   fs.renameSync(PAIRS_TMP, PAIRS_PATH);
