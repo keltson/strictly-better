@@ -3,16 +3,17 @@ export default async function handler(req, res) {
   if (!url) return res.status(400).json({ error: 'Missing url' });
 
   let cards = [];
+  let deckName = null;
   try {
     const moxMatch = url.match(/moxfield\.com\/decks\/([^/?#]+)/);
     const archiMatch = url.match(/archidekt\.com\/decks\/(\d+)/);
-
     if (moxMatch) {
       const r = await fetch(`https://api2.moxfield.com/v3/decks/all/${moxMatch[1]}`, {
         headers: { 'User-Agent': 'strictly-better/1.0' },
       });
       if (!r.ok) return res.status(r.status).json({ error: 'Moxfield API error' });
       const data = await r.json();
+      deckName = data.name ?? null;
       for (const board of ['mainboard', 'commanders']) {
         const b = data.boards?.[board]?.cards;
         if (b) for (const entry of Object.values(b)) {
@@ -25,6 +26,7 @@ export default async function handler(req, res) {
       });
       if (!r.ok) return res.status(r.status).json({ error: 'Archidekt API error' });
       const data = await r.json();
+      deckName = data.name ?? null;
       for (const entry of (data.cards ?? [])) {
         if (entry.categories?.includes('Maybeboard')) continue;
         const name = entry.card?.oracleCard?.name;
@@ -37,5 +39,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e.message });
   }
 
-  res.json({ cards: [...new Set(cards)] });
+  res.json({ name: deckName, cards: [...new Set(cards)] });
 }
