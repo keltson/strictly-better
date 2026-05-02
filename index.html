@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Strictly Better Commander Cards</title>
+<script defer src="/_vercel/insights/script.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -58,33 +59,70 @@
 
   .controls {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .controls-row {
-    display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 4px 12px;
     align-items: center;
   }
 
-  .controls-row + .controls-row {
-    margin-top: 6px;
+  /* zero-height full-width element that forces a new flex row */
+  .controls-break {
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  .sort-wrap {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .controls-row-2 {
+    flex-basis: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     padding: 0 6px;
   }
+
+  .search-group {
+    display: flex;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .search-group select {
+    background-color: rgba(255,255,255,0.08);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    color: #e0e0e0;
+    font-size: 0.85rem;
+    padding: 9px 26px 9px 12px;
+    cursor: pointer;
+    outline: none;
+    flex-shrink: 0;
+    transition: border-color 0.2s;
+  }
+
+  .search-group select:focus { border-color: #999; }
 
   .search-wrap {
     position: relative;
     flex: 1;
-    min-width: 200px;
+    min-width: 0;
   }
 
   .search-wrap input {
     width: 100%;
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
+    border-radius: 0 8px 8px 0;
     color: #e0e0e0;
     font-size: 0.95rem;
     padding: 9px 36px 9px 14px;
@@ -109,6 +147,7 @@
 
   .search-wrap input:not(:placeholder-shown) ~ .clear-btn { display: block; }
 
+
   label {
     font-size: 0.85rem;
     color: rgba(255,255,255,0.6);
@@ -117,11 +156,16 @@
 
   select {
     background: rgba(255,255,255,0.08);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    appearance: none;
+    -webkit-appearance: none;
     border: 1px solid rgba(255,255,255,0.2);
     border-radius: 8px;
     color: #e0e0e0;
     font-size: 0.9rem;
-    padding: 9px 12px;
+    padding: 9px 30px 9px 12px;
     cursor: pointer;
     outline: none;
   }
@@ -400,8 +444,23 @@
       min-width: 0;
     }
 
-    .controls-row {
-      gap: 6px;
+    .controls {
+      gap: 4px 6px;
+    }
+
+    .controls-row-2 { display: contents; }
+    .search-group { order: 1; }
+    .controls-break { order: 2; }
+    .sort-wrap { order: 3; }
+    .mobile-filter-select { order: 4; display: block !important; }
+    .stat-badge { order: 5; }
+
+    .sort-label {
+      display: none;
+    }
+
+    .checkbox-filter {
+      display: none !important;
     }
 
     label {
@@ -473,7 +532,7 @@
 
 <div id="loading">
   <div class="ring"></div>
-  <div id="loading-text">Loading card data from Scryfall…</div>
+  <div id="loading-text">Loading…</div>
   <div id="loading-progress"><div id="loading-bar"></div></div>
 </div>
 
@@ -482,31 +541,43 @@
 <header>
   <div class="h1-wrap"><h1>Strictly Better Commander Cards</h1></div>
   <div class="controls">
-    <div class="controls-row">
+    <div class="search-group">
+      <select id="search-scope">
+        <option value="all">All cards</option>
+        <option value="better">Better cards</option>
+        <option value="worse">Worse cards</option>
+      </select>
       <div class="search-wrap">
-        <input type="text" id="search" placeholder="Search card names…">
-        <button class="clear-btn" onclick="document.getElementById('search').value='';applyFilters()">✕</button>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <label>Sort by</label>
-        <select id="sort">
-          <option value="name-asc">Name A–Z</option>
-          <option value="name-desc">Name Z–A</option>
-          <option value="price-desc">Price High–Low</option>
-          <option value="price-asc">Price Low–High</option>
-          <option value="beats-desc">Most Beats</option>
-        </select>
+        <input type="text" id="search" placeholder="Search using Scryfall syntax">
+        <button class="clear-btn" onclick="document.getElementById('search').value='';clearSearch()">✕</button>
       </div>
     </div>
-    <div class="controls-row">
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+    <div class="sort-wrap">
+      <label class="sort-label">Sort by</label>
+      <select id="sort">
+        <option value="name-asc">Name A–Z</option>
+        <option value="name-desc">Name Z–A</option>
+        <option value="price-desc">Price high–low</option>
+        <option value="price-asc">Price low–high</option>
+        <option value="beats-desc">Most beats</option>
+        <option value="most-played">Most played</option>
+      </select>
+    </div>
+    <div class="controls-break"></div>
+    <div class="controls-row-2">
+      <label class="checkbox-filter" style="display:flex;align-items:center;gap:6px;cursor:pointer">
         <input type="checkbox" id="budget-filter" style="accent-color:#4ade80;width:15px;height:15px;cursor:pointer">
         Budget upgrades
       </label>
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+      <label class="checkbox-filter" style="display:flex;align-items:center;gap:6px;cursor:pointer">
         <input type="checkbox" id="underplayed-filter" style="accent-color:#4ade80;width:15px;height:15px;cursor:pointer">
         Underplayed
       </label>
+      <select id="mobile-filter" class="mobile-filter-select" style="display:none">
+        <option value="none">No filter</option>
+        <option value="budget">Budget upgrades</option>
+        <option value="underplayed">Underplayed</option>
+      </select>
       <div class="stat-badge" style="margin-left:auto">Showing <span id="results-count">—</span> cards</div>
     </div>
   </div>
@@ -521,342 +592,9 @@
 </footer>
 
 <script>
-// ── Raw CSV data ──────────────────────────────────────────────────────────────
-const RAW = [
-  ["Aang's Iceberg","Banishing Light"],
-  ["Abstruse Appropriation","Utter End"],
-  ["Abundant Countryside","Ancient Ziggurat"],
-  ["Admiral's Order","Cancel"],
-  ["Airship Crash","Broken Wings"],
-  ["Alhammarret's Archive","Boon Reflection"],
-  ["Amazing Acrobatics","Cancel"],
-  ["Arcane Sanctum","Submerged Boneyard"],
-  ["Arid Archway","Guildless Commons"],
-  ["Big Apple, 3 a.m.","Uncharted Haven"],
-  ["Big Score","Unexpected Windfall"],
-  ["Big Score","Pirate's Pillage"],
-  ["Bitter Reunion","Tormenting Voice"],
-  ["Black Dragon Gate","Submerged Boneyard"],
-  ["Black Dragon Gate","Foul Orchard"],
-  ["Black Dragon Gate","Rakdos Guildgate"],
-  ["Black Dragon Gate","Dimir Guildgate"],
-  ["Black Dragon Gate","Orzhov Guildgate"],
-  ["Black Dragon Gate","Golgari Guildgate"],
-  ["Blazemire Verge","Tainted Peak"],
-  ["Bloody Betrayal","Act of Treason"],
-  ["Blooming Marsh","Foul Orchard"],
-  ["Botanical Sanctum","Woodland Stream"],
-  ["Bounce Off","Unsummon"],
-  ["Brainsurge","Quick Study"],
-  ["Brass Infiniscope","Sisay's Ring"],
-  ["Breathe Your Last","Hero's Downfall"],
-  ["Breathe Your Last","Murder"],
-  ["Breeding Pool","Woodland Stream"],
-  ["Broken Concentration","Cancel"],
-  ["Bronze Walrus","Alloy Myr"],
-  ["Bulk Up","Unleash Fury"],
-  ["Burst Lightning","Shock"],
-  ["Calciform Pools","Mage-Ring Network"],
-  ["Canopy Vista","Radiant Grove"],
-  ["Canyon Slough","Polluted Mire"],
-  ["Canyon Slough","Geothermal Bog"],
-  ["Canyon Slough","Smoldering Crater"],
-  ["Cavern of Souls","Unclaimed Territory"],
-  ["Chocobo Racetrack","Zendikar's Roil"],
-  ["Choked Estuary","Submerged Boneyard"],
-  ["Citadel Gate","Boros Guildgate"],
-  ["Citadel Gate","Selesnya Guildgate"],
-  ["Citadel Gate","Orzhov Guildgate"],
-  ["Citadel Gate","Azorius Guildgate"],
-  ["Cliffgate","Rakdos Guildgate"],
-  ["Cliffgate","Boros Guildgate"],
-  ["Cliffgate","Izzet Guildgate"],
-  ["Cliffgate","Gruul Guildgate"],
-  ["Coldsteel Heart","Charcoal Diamond"],
-  ["Coldsteel Heart","Marble Diamond"],
-  ["Coldsteel Heart","Sky Diamond"],
-  ["Coldsteel Heart","Fire Diamond"],
-  ["Coldsteel Heart","Moss Diamond"],
-  ["Collective Resistance","Naturalize"],
-  ["Corrupted Conviction","Altar's Reap"],
-  ["Costly Plunder","Altar's Reap"],
-  ["Counterspell","Wizard's Retort"],
-  ["Creeping Tar Pit","Submerged Boneyard"],
-  ["Crumbling Necropolis","Submerged Boneyard"],
-  ["Crystal Grotto","Zhalfirin Void"],
-  ["Darkslick Shores","Submerged Boneyard"],
-  ["Demand Answers","Tormenting Voice"],
-  ["Demand Answers","Thrill of Possibility"],
-  ["Desperate Ritual","Pyretic Ritual"],
-  ["Dimir Guildgate","Submerged Boneyard"],
-  ["Disallow","Voidslime"],
-  ["Dismal Backwater","Submerged Boneyard"],
-  ["Dissolve","Cancel"],
-  ["Drowned Catacomb","Submerged Boneyard"],
-  ["Drown in Dreams","Stroke of Genius"],
-  ["Eaten by Piranhas","Frogify"],
-  ["Eclipsed Steppe","Sunlit Marsh"],
-  ["Edgewall Inn","Uncharted Haven"],
-  ["Elfsworn Giant","Sporemound"],
-  ["Encroaching Dragonstorm","Explosive Vegetation"],
-  ["End the Festivities","Blazing Volley"],
-  ["Enduring Courage","Ogre Battledriver"],
-  ["Entish Restoration","Roiling Regrowth"],
-  ["Escape Tunnel","Terramorphic Expanse"],
-  ["Escape Tunnel","Evolving Wilds"],
-  ["Eusocial Engineering","Zendikar's Roil"],
-  ["Eviscerator's Insight","Costly Plunder"],
-  ["Eviscerator's Insight","Altar's Reap"],
-  ["Experimental Augury","Steady Progress"],
-  ["Experimental Augury","Contentious Plan"],
-  ["Fading Hope","Unsummon"],
-  ["Fanatical Offering","Costly Plunder"],
-  ["Fanatical Offering","Altar's Reap"],
-  ["Feather of Flight","Angelic Gift"],
-  ["Feed the Cycle","Murder"],
-  ["Feed the Cycle","Hero's Downfall"],
-  ["Feed the Infection","Ambition's Cost"],
-  ["Felidar Retreat","Zendikar's Roil"],
-  ["Festering Gulch","Foul Orchard"],
-  ["Fetid Pools","Remote Isle"],
-  ["Fetid Pools","Contaminated Aquifer"],
-  ["Final Fortune","Last Chance"],
-  ["Flare of Denial","Cancel"],
-  ["Floodfarm Verge","Nimbus Maze"],
-  ["Foolish Fate","Murder"],
-  ["Forbid","Cancel"],
-  ["Forbidden Friendship","Krenko's Command"],
-  ["Forbidden Friendship","Dragon Fodder"],
-  ["Fountainport Bell","Traveler's Amulet"],
-  ["Frontier Bivouac","Woodland Stream"],
-  ["Frost Marsh","Submerged Boneyard"],
-  ["Furnace Reins","Act of Treason"],
-  ["Gilt-Leaf Palace","Foul Orchard"],
-  ["Gloomlake Verge","Tainted Isle"],
-  ["Glorious Gale","Essence Scatter"],
-  ["Goatnap","Act of Treason"],
-  ["Golgari Guildgate","Foul Orchard"],
-  ["Grab the Prize","Tormenting Voice"],
-  ["Great Train Heist","Relentless Assault"],
-  ["Gudul Lurker","Triton Shorestalker"],
-  ["Gudul Lurker","Mist-Cloaked Herald"],
-  ["Haste Magic","Blazing Crescendo"],
-  ["Hedron Archive","Sisay's Ring"],
-  ["Hellspur Posse Boss","Beetleback Chief"],
-  ["Heritage Reclamation","Return to Nature"],
-  ["Heritage Reclamation","Naturalize"],
-  ["Hero's Downfall","Murder"],
-  ["High Noon","Rule of Law"],
-  ["Hinterland Harbor","Woodland Stream"],
-  ["Hissing Quagmire","Foul Orchard"],
-  ["Ice Out","Cancel"],
-  ["Ichor Elixir","Sisay's Ring"],
-  ["Indatha Triome","Foul Orchard"],
-  ["Indatha Triome","Sandsteppe Citadel"],
-  ["Indebted Spirit","Doomed Traveler"],
-  ["Insidious Fungus","Caustic Caterpillar"],
-  ["Invasion of Zendikar // Awakened Skyclave","Explosive Vegetation"],
-  ["Irrigated Farmland","Drifting Meadow"],
-  ["Irrigated Farmland","Remote Isle"],
-  ["Irrigated Farmland","Idyllic Beachfront"],
-  ["Jungle Hollow","Foul Orchard"],
-  ["Jwar Isle Refuge","Submerged Boneyard"],
-  ["Kellan, the Fae-Blooded // Birthright Boon","Open the Armory"],
-  ["Ketria Triome","Woodland Stream"],
-  ["Kitchen","Woodland Stream"],
-  ["Lakeside Shack","Woodland Stream"],
-  ["Legion Leadership // Legion Stronghold","Unleash Fury"],
-  ["Lightning Bolt","Lightning Strike"],
-  ["Lightning Bolt","Shock"],
-  ["Lorehold Campus","Boros Guildgate"],
-  ["Lounge","Foul Orchard"],
-  ["Lumbering Falls","Woodland Stream"],
-  ["Lush Oasis","Woodland Stream"],
-  ["Mana Drain","Counterspell"],
-  ["Managorger Hydra","Taurean Mauler"],
-  ["Mana Sculpt","Cancel"],
-  ["Manor Gate","Simic Guildgate"],
-  ["Manor Gate","Golgari Guildgate"],
-  ["Manor Gate","Selesnya Guildgate"],
-  ["Manor Gate","Gruul Guildgate"],
-  ["Map the Frontier","Explosive Vegetation"],
-  ["Mastermind's Acquisition","Diabolic Tutor"],
-  ["Migration Path","Explosive Vegetation"],
-  ["Mirrorhall Mimic // Ghastly Mimicry","Clone"],
-  ["Molten Collapse","Dreadbore"],
-  ["Morphic Pool","Submerged Boneyard"],
-  ["Multiversal Passage","Uncharted Haven"],
-  ["Murky Sewer","Submerged Boneyard"],
-  ["Mystical Tutor","Personal Tutor"],
-  ["Mythos of Nethroi","Murder"],
-  ["Naga Fleshcrafter","Clone"],
-  ["Neutralize","Cancel"],
-  ["New Generation's Technique","Explosive Vegetation"],
-  ["Night Market","Uncharted Haven"],
-  ["Noggle the Mind","Frogify"],
-  ["Oasis Gardener","Alloy Myr"],
-  ["Ooze Spill","Cancel"],
-  ["Opulent Palace","Woodland Stream"],
-  ["Opulent Palace","Submerged Boneyard"],
-  ["Opulent Palace","Foul Orchard"],
-  ["Origin of Metalbending","Naturalize"],
-  ["Overgrown Tomb","Foul Orchard"],
-  ["Pack's Betrayal","Act of Treason"],
-  ["Path of the Schemer","Extract from Darkness"],
-  ["Perilous Snare","Banishing Light"],
-  ["Phyrexian Metamorph","Clone"],
-  ["Piercing Exhale","Bite Down"],
-  ["Play with Fire","Shock"],
-  ["Poison the Cup","Murder"],
-  ["Preordain","Serum Visions"],
-  ["Price of Loyalty","Act of Treason"],
-  ["Prismari Campus","Izzet Guildgate"],
-  ["Promising Vein","Bant Panorama"],
-  ["Promising Vein","Jund Panorama"],
-  ["Promising Vein","Naya Panorama"],
-  ["Psychic Paper","Trailblazer's Boots"],
-  ["Psychic Paper","Prowler's Helm"],
-  ["Qarsi Revenant","Vampire Nighthawk"],
-  ["Quandrix Campus","Woodland Stream"],
-  ["Quandrix Campus","Simic Guildgate"],
-  ["Radiant Summit","Sacred Peaks"],
-  ["Raugrin Triome","Mystic Monastery"],
-  ["Reckoner's Bargain","Altar's Reap"],
-  ["Reconnaissance Mission","Coastal Piracy"],
-  ["Refute","Cancel"],
-  ["Relic of Sauron","Sisay's Ring"],
-  ["Restart Sequence","Zombify"],
-  ["Return from the Wilds","Farhaven Elf"],
-  ["Return the Favor","Wild Ricochet"],
-  ["Return to Nature","Naturalize"],
-  ["Reverse the Polarity","Cancel"],
-  ["Rising of the Day","Fervor"],
-  ["Romantic Rendezvous","Tormenting Voice"],
-  ["Ruin-Lurker Bat","Healer's Hawk"],
-  ["Rumble Arena","Zhalfirin Void"],
-  ["Rumble Arena","Crystal Grotto"],
-  ["Sandsteppe Citadel","Foul Orchard"],
-  ["Saruman's Trickery","Cancel"],
-  ["Savage Lands","Foul Orchard"],
-  ["Savai Triome","Nomad Outpost"],
-  ["Scattered Groves","Drifting Meadow"],
-  ["Scattered Groves","Radiant Grove"],
-  ["Scatter to the Winds","Cancel"],
-  ["Scorched Geyser","Molten Tributary"],
-  ["Scuttlemutt","Alloy Myr"],
-  ["Sea Gate","Azorius Guildgate"],
-  ["Sea Gate","Submerged Boneyard"],
-  ["Sea Gate","Woodland Stream"],
-  ["Sea Gate","Dimir Guildgate"],
-  ["Sea Gate","Simic Guildgate"],
-  ["Sea Gate","Izzet Guildgate"],
-  ["Seaside Citadel","Woodland Stream"],
-  ["Secluded Courtyard","Unclaimed Territory"],
-  ["Secluded Glen","Submerged Boneyard"],
-  ["Secluded Starforge","Urza's Factory"],
-  ["Secret Passage","Submerged Boneyard"],
-  ["Seedship Impact","Naturalize"],
-  ["Sheltered Thicket","Wooded Ridgeline"],
-  ["Sheltered Thicket","Smoldering Crater"],
-  ["Shire Terrace","Naya Panorama"],
-  ["Shire Terrace","Jund Panorama"],
-  ["Shire Terrace","Bant Panorama"],
-  ["Shower of Arrows","Broken Wings"],
-  ["Silverquill Campus","Orzhov Guildgate"],
-  ["Silver Scrutiny","Mind Spring"],
-  ["Simic Guildgate","Woodland Stream"],
-  ["Sinister Sabotage","Cancel"],
-  ["Skyclave Relic","Darksteel Ingot"],
-  ["Skyshroud Claim","Ranger's Path"],
-  ["Slither Blade","Mist-Cloaked Herald"],
-  ["Sodden Verdure","Tangled Islet"],
-  ["Soured Springs","Submerged Boneyard"],
-  ["Spell Snuff","Cancel"],
-  ["Spider-Man No More","Frogify"],
-  ["Spin Out","Murder"],
-  ["Splinter's Technique","Diabolic Tutor"],
-  ["Stoic Rebuttal","Cancel"],
-  ["Stonespeaker Crystal","Sisay's Ring"],
-  ["Strangled Cemetery","Foul Orchard"],
-  ["Sunken Citadel","Uncharted Haven"],
-  ["Sunken Hollow","Submerged Boneyard"],
-  ["Systems Override","Act of Treason"],
-  ["Taiga","Stomping Ground"],
-  ["Taiga","Gruul Guildgate"],
-  ["Take for a Ride","Act of Treason"],
-  ["Tarnation Vista","Uncharted Haven"],
-  ["Tear Asunder","Naturalize"],
-  ["Tectonic Hazard","Blazing Volley"],
-  ["Temple of Deceit","Submerged Boneyard"],
-  ["Temple of Malady","Foul Orchard"],
-  ["Temple of Mystery","Woodland Stream"],
-  ["Thornwood Falls","Woodland Stream"],
-  ["Thought Collapse","Cancel"],
-  ["Thran Dynamo","Sisay's Ring"],
-  ["Three Steps Ahead","Cancel"],
-  ["Thrill of Possibility","Tormenting Voice"],
-  ["Thriving Grove","Foul Orchard"],
-  ["Thriving Grove","Woodland Stream"],
-  ["Thriving Isle","Woodland Stream"],
-  ["Thriving Isle","Submerged Boneyard"],
-  ["Thriving Moor","Submerged Boneyard"],
-  ["Thriving Moor","Foul Orchard"],
-  ["Town Greeter","Satyr Wayfinder"],
-  ["Twist Reality","Cancel"],
-  ["Undergrowth","Fog"],
-  ["Unexpected Request","Act of Treason"],
-  ["Unravel","Cancel"],
-  ["Urban Retreat","Seaside Citadel"],
-  ["Urban Retreat","Woodland Stream"],
-  ["Utter Insignificance","Eaten by Piranhas"],
-  ["Vampiric Tutor","Imperial Seal"],
-  ["Vapor Snag","Unsummon"],
-  ["Vastwood Surge","Explosive Vegetation"],
-  ["Veil of Summer","Autumn's Veil"],
-  ["Vengeful Possession","Act of Treason"],
-  ["Vernal Fen","Haunted Mire"],
-  ["Village Rites","Altar's Reap"],
-  ["Waterfront District","Submerged Boneyard"],
-  ["Watery Grave","Submerged Boneyard"],
-  ["Wild Slash","Shock"],
-  ["Wild Unraveling","Cancel"],
-  ["Wilt","Naturalize"],
-  ["Winding Way","Mulch"],
-  ["Witherbloom Campus","Golgari Guildgate"],
-  ["Witherbloom Campus","Foul Orchard"],
-  ["Witness Protection","Frogify"],
-  ["Wizard's Retort","Cancel"],
-  ["Woodland Cemetery","Foul Orchard"],
-  ["Word of Undoing","Unsummon"],
-  ["Words of Wisdom","Vision Skeins"],
-  ["Worldly Tutor","Sylvan Tutor"],
-  ["World Map","Traveler's Amulet"],
-  ["Wrath of God","Day of Judgment"],
-  ["You Find the Villains' Lair","Cancel"],
-  ["Zagoth Triome","Woodland Stream"],
-  ["Zagoth Triome","Submerged Boneyard"],
-  ["Zagoth Triome","Opulent Palace"],
-  ["Zagoth Triome","Foul Orchard"],
-];
-
-// ── Group by Column A ─────────────────────────────────────────────────────────
-const groups = {};
-for (const [better, worse] of RAW) {
-  if (!groups[better]) groups[better] = new Set();
-  groups[better].add(worse);
-}
-const groupList = Object.entries(groups).map(([better, worseSet]) => ({
-  better,
-  worse: [...worseSet],
-}));
-
-// ── Collect all unique card names ────────────────────────────────────────────
-const allNames = new Set();
-for (const { better, worse } of groupList) {
-  allNames.add(better);
-  for (const w of worse) allNames.add(w);
-}
-const nameList = [...allNames];
+// ── Card data (populated at init from card-pairs.json / card-cache.json) ──────
+let groupList = [];
+let nameList = [];
 
 // ── Scryfall data store ───────────────────────────────────────────────────────
 const cardData = {}; // name -> { image, price, priceLabel, foil, url, tcgplayer }
@@ -889,28 +627,40 @@ async function fetchEdhrecCard(name) {
 }
 
 async function loadEdhrecData() {
-  for (const name of nameList) {
-    if (edhrecData[name] !== undefined) continue;
-    const result = await fetchEdhrecCard(name);
-    edhrecData[name] = result; // null if failed/missing
-    // Update any rendered anchors for this card
-    document.querySelectorAll(`[data-edhrec="${CSS.escape(name)}"]`).forEach(el => {
-      el.textContent = result ? `${result.pct}% of ${fmtDecks(result.potentialDecks)} decks` : "EDHRec";
-    });
-    if (document.getElementById("underplayed-filter")?.checked) applyFilters();
-    await new Promise(r => setTimeout(r, 80));
-  }
-}
+  const CONCURRENCY = 8;
+  const bar = document.getElementById("loading-bar");
+  const text = document.getElementById("loading-text");
+  const loadingEl = document.getElementById("loading");
+  const total = nameList.length;
+  let done = 0;
+  const queue = nameList.filter(n => edhrecData[n] === undefined);
+  done = total - queue.length; // pre-cached cards count as done
 
-async function fetchBatch(names) {
-  const identifiers = names.map(name => ({ name }));
-  const res = await fetch("https://api.scryfall.com/cards/collection", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ identifiers }),
-  });
-  const json = await res.json();
-  return json.data || [];
+  async function worker() {
+    while (queue.length > 0) {
+      const name = queue.shift();
+      const result = await fetchEdhrecCard(name);
+      edhrecData[name] = result;
+      done++;
+      document.querySelectorAll(`[data-edhrec="${CSS.escape(name)}"]`).forEach(el => {
+        el.textContent = result ? `${result.pct}% of ${fmtDecks(result.potentialDecks)} decks` : "EDHRec";
+      });
+      if (loadingSource === 'edhrec') {
+        bar.style.width = `${Math.round((done / total) * 100)}%`;
+        text.textContent = `Loading EDHRec data… (${done}/${total})`;
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+
+  edhrecLoaded = true;
+  saveEdhrecCache(edhrecData);
+  if (loadingSource === 'edhrec') {
+    loadingSource = null;
+    loadingEl.style.display = "none";
+    applyFilters();
+  }
 }
 
 function getImageUri(card) {
@@ -928,40 +678,132 @@ function getPriceLabel(card) {
   return { label: "—", value: null, foil: false };
 }
 
-async function loadAllCards() {
-  const bar = document.getElementById("loading-bar");
-  const text = document.getElementById("loading-text");
+// ── Price caching (localStorage, 24h TTL) ────────────────────────────────────
+const PRICE_CACHE_KEY = 'sb-prices-v1';
+const PRICE_CACHE_TTL = 86_400_000;
+
+function loadCachedPrices() {
+  try {
+    const raw = localStorage.getItem(PRICE_CACHE_KEY);
+    if (!raw) return null;
+    const { ts, prices } = JSON.parse(raw);
+    if (Date.now() - ts > PRICE_CACHE_TTL) return null;
+    return prices;
+  } catch {
+    return null;
+  }
+}
+
+function savePriceCache(prices) {
+  try {
+    localStorage.setItem(PRICE_CACHE_KEY, JSON.stringify({ ts: Date.now(), prices }));
+  } catch { /* quota exceeded — skip */ }
+}
+
+// ── EDHRec caching (localStorage, 24h TTL) ──────────────────────────────────
+const EDHREC_CACHE_KEY = 'sb-edhrec-v1';
+const EDHREC_CACHE_TTL = 86_400_000;
+
+function loadCachedEdhrecData() {
+  try {
+    const raw = localStorage.getItem(EDHREC_CACHE_KEY);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > EDHREC_CACHE_TTL) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function saveEdhrecCache(data) {
+  try {
+    localStorage.setItem(EDHREC_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+  } catch { /* quota exceeded — skip */ }
+}
+
+// Scryfall collection API rejects '// back face' DFC names — use front face only
+function scryfallName(name) {
+  return name.includes(' // ') ? name.split(' // ')[0] : name;
+}
+
+async function loadPrices() {
   const BATCH = 75;
   const chunks = [];
   for (let i = 0; i < nameList.length; i += BATCH)
     chunks.push(nameList.slice(i, i + BATCH));
 
-  let done = 0;
-  for (const chunk of chunks) {
-    text.textContent = `Loading cards… (${done}/${nameList.length})`;
+  const newPrices = {};
+  const bar = document.getElementById("loading-bar");
+  const text = document.getElementById("loading-text");
+
+  async function fetchChunk(chunk) {
+    // Map scryfall lookup name → original name for DFCs
+    const lookup = Object.fromEntries(chunk.map(n => [scryfallName(n), n]));
     try {
-      const cards = await fetchBatch(chunk);
-      for (const card of cards) {
-        const name = card.name;
-        const price = getPriceLabel(card);
-        cardData[name] = {
-          image: getImageUri(card),
-          price: price.value,
-          priceLabel: price.label,
-          foil: price.foil,
-          url: card.scryfall_uri,
-          tcgplayer: card.purchase_uris?.tcgplayer ?? null,
-        };
+      const identifiers = Object.keys(lookup).map(name => ({ name }));
+      const res = await fetch("https://api.scryfall.com/cards/collection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifiers }),
+      });
+      const json = await res.json();
+      for (const card of (json.data || [])) {
+        const name = lookup[card.name] ?? card.name;
+        const { value, label, foil } = getPriceLabel(card);
+        const p = { price: value, priceLabel: label, foil, tcgplayer: card.purchase_uris?.tcgplayer ?? null };
+        newPrices[name] = p;
+        if (!cardData[name]) {
+          // Card missing from cache — populate static fields from Scryfall as fallback
+          const faces = card.card_faces;
+          cardData[name] = {
+            name,
+            image: getImageUri(card),
+            url: card.scryfall_uri,
+            oracle: (faces ? faces.map(f => f.oracle_text ?? '').join('\n') : (card.oracle_text ?? '')).toLowerCase(),
+            type: (faces ? faces.map(f => f.type_line ?? card.type_line ?? '').join(' // ') : (card.type_line ?? '')).toLowerCase(),
+            colors: card.colors ?? [],
+            colorIdentity: card.color_identity ?? [],
+            cmc: card.cmc ?? 0,
+            rarity: card.rarity ?? '',
+            keywords: (card.keywords ?? []).map(k => k.toLowerCase()),
+            legalities: card.legalities ?? {},
+            power: card.power ?? null,
+            toughness: card.toughness ?? null,
+            set: card.set ?? '',
+            manaCost: ((faces ? faces[0]?.mana_cost : card.mana_cost) ?? '').toLowerCase(),
+          };
+        }
+        Object.assign(cardData[name], p);
+        // Update any already-rendered price elements for this card
+        document.querySelectorAll(`[data-price="${CSS.escape(name)}"]`).forEach(el => {
+          el.className = "card-price" + (p.foil ? " foil" : p.price === null ? " na" : "");
+          el.textContent = p.priceLabel;
+          if (p.tcgplayer && p.price !== null) {
+            el.title = "View on TCGPlayer";
+            el.onclick = () => window.open(p.tcgplayer, "_blank");
+          }
+        });
       }
     } catch (e) {
-      console.warn("Scryfall batch failed:", e);
+      console.warn("Scryfall price batch failed:", e);
     }
-    done = Math.min(done + BATCH, nameList.length);
-    bar.style.width = `${Math.round((done / nameList.length) * 100)}%`;
-    // Polite delay between batches
-    if (chunks.indexOf(chunk) < chunks.length - 1)
-      await new Promise(r => setTimeout(r, 120));
+    pricesFetched += chunk.length;
+    if (loadingSource === 'price') {
+      bar.style.width = `${Math.round((pricesFetched / nameList.length) * 100)}%`;
+      text.textContent = `Loading price data… (${pricesFetched}/${nameList.length})`;
+    }
   }
+
+  await Promise.all(chunks.map(fetchChunk));
+
+  pricesLoaded = true;
+  savePriceCache(newPrices);
+  if (loadingSource === 'price') {
+    loadingSource = null;
+    document.getElementById("loading").style.display = "none";
+  }
+  applyFilters();
 }
 
 // ── Popup on hover ────────────────────────────────────────────────────────────
@@ -1015,6 +857,7 @@ function cardEl(name, isMain) {
   div.appendChild(nameDiv);
 
   const priceDiv = document.createElement("div");
+  priceDiv.dataset.price = name;
   if (data) {
     priceDiv.className = "card-price" + (data.foil ? " foil" : data.price === null ? " na" : "");
     priceDiv.textContent = data.priceLabel;
@@ -1037,7 +880,7 @@ function cardEl(name, isMain) {
   edhrecA.dataset.edhrec = name;
   const ed = edhrecData[name];
   edhrecA.textContent = ed
-    ? `${ed.pct}% of ${ed.potentialDecks.toLocaleString()} decks`
+    ? `${ed.pct}% of ${fmtDecks(ed.potentialDecks)} decks`
     : (edhrecData[name] === null ? "EDHRec" : "EDHRec…");
   linksDiv.appendChild(edhrecA);
   div.appendChild(linksDiv);
@@ -1076,19 +919,235 @@ function renderGroup(group) {
   return div;
 }
 
+// ── Local Scryfall-syntax query parser ────────────────────────────────────────
+function isScryfallQuery(q) {
+  return q.includes(":");
+}
+
+
+// Parse one raw token into { neg, field, op, value }
+function parseToken(tok) {
+  let i = 0;
+  const neg = tok[0] === '-';
+  if (neg) i++;
+
+  let field = '';
+  while (i < tok.length && /[a-zA-Z_]/.test(tok[i])) field += tok[i++];
+
+  // Determine operator (comparison chars, then optional colon)
+  let op = '';
+  while (i < tok.length && /[><=!]/.test(tok[i])) op += tok[i++];
+  if (!op && i < tok.length && tok[i] === ':') { op = ':'; i++; }
+
+  if (!field || !op || i >= tok.length) {
+    // Bare word — name contains search
+    const val = neg ? tok.slice(1) : tok;
+    return { neg, field: 'name', op: ':', value: val.toLowerCase() };
+  }
+
+  let value = tok.slice(i);
+  if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
+  return { neg, field: field.toLowerCase(), op, value: value.toLowerCase() };
+}
+
+// Returns array of OR-groups; each group is an array of AND-conditions
+function parseQueryString(raw) {
+  return raw.split(/\bor\b/i).map(segment => {
+    const conds = [];
+    // Tokenize respecting quoted strings
+    const re = /[^\s"]+(?:"[^"]*"[^\s"]*)*|"[^"]*"/g;
+    let m;
+    while ((m = re.exec(segment)) !== null) conds.push(parseToken(m[0]));
+    return conds;
+  }).filter(g => g.length > 0);
+}
+
+const COLOR_LETTER = { w: 'W', u: 'U', b: 'B', r: 'R', g: 'G' };
+
+function matchColors(cardColors, op, val) {
+  if (val === 'c' || val === 'colorless') {
+    const match = cardColors.length === 0;
+    return (op === '!=' ) ? !match : match;
+  }
+  if (val === 'm' || val === 'multi' || val === 'multicolor') {
+    const match = cardColors.length >= 2;
+    return (op === '!=') ? !match : match;
+  }
+  const target = [...val].map(c => COLOR_LETTER[c]).filter(Boolean);
+  if (!target.length) return false;
+  switch (op) {
+    case ':':  case '>=': return target.every(c => cardColors.includes(c));
+    case '=':  case '==': return cardColors.length === target.length && target.every(c => cardColors.includes(c));
+    case '>':             return target.every(c => cardColors.includes(c)) && cardColors.length > target.length;
+    case '<=':            return cardColors.every(c => target.includes(c));
+    case '<':             return cardColors.every(c => target.includes(c)) && cardColors.length < target.length;
+    case '!=':            return !target.every(c => cardColors.includes(c));
+    default:              return target.every(c => cardColors.includes(c));
+  }
+}
+
+function compareNum(a, op, b) {
+  if (isNaN(a) || isNaN(b)) return false;
+  switch (op) {
+    case ':': case '=': case '==': return a === b;
+    case '>':  return a > b;
+    case '<':  return a < b;
+    case '>=': return a >= b;
+    case '<=': return a <= b;
+    case '!=': return a !== b;
+    default:   return false;
+  }
+}
+
+function compareStr(str, op, val) {
+  switch (op) {
+    case ':':             return str.includes(val);
+    case '=': case '==': return str === val;
+    case '!=':            return !str.includes(val);
+    default:              return str.includes(val);
+  }
+}
+
+function matchIs(card, val) {
+  switch (val) {
+    case 'land':        return card.type.includes('land');
+    case 'creature':    return card.type.includes('creature');
+    case 'artifact':    return card.type.includes('artifact');
+    case 'enchantment': return card.type.includes('enchantment');
+    case 'instant':     return card.type.includes('instant');
+    case 'sorcery':     return card.type.includes('sorcery');
+    case 'planeswalker':return card.type.includes('planeswalker');
+    case 'spell':       return !card.type.includes('land');
+    case 'legendary':   return card.type.includes('legendary');
+    case 'basic':       return card.type.includes('basic');
+    case 'nonbasic':    return card.type.includes('land') && !card.type.includes('basic');
+    case 'multicolor':  case 'multi': return card.colors.length >= 2;
+    case 'colorless':   return card.colors.length === 0;
+    case 'monocolored': case 'mono': return card.colors.length === 1;
+    case 'commander':   return card.type.includes('legendary') &&
+                               (card.type.includes('creature') || card.type.includes('planeswalker'));
+    default: return false;
+  }
+}
+
+function matchCondition(cond, card) {
+  if (!card) return false;
+  const { field, op, value } = cond;
+  switch (field) {
+    case 'o': case 'oracle':
+      return compareStr(card.oracle ?? '', op, value);
+    case 't': case 'type':
+      return compareStr(card.type ?? '', op, value);
+    case 'c': case 'color':
+      return matchColors(card.colors ?? [], op, value);
+    case 'ci': case 'id': case 'identity':
+      return matchColors(card.colorIdentity ?? [], op, value);
+    case 'mv': case 'cmc':
+      return compareNum(card.cmc ?? 0, op, parseFloat(value));
+    case 'r': case 'rarity':
+      return compareStr(card.rarity ?? '', op, value);
+    case 'f': case 'format': case 'legal': {
+      const leg = (card.legalities ?? {})[value];
+      return leg === 'legal' || leg === 'restricted';
+    }
+    case 'keyword':
+      return (card.keywords ?? []).some(k => k.includes(value));
+    case 'pow': case 'power':
+      return card.power != null && card.power !== '*' &&
+             compareNum(parseFloat(card.power), op, parseFloat(value));
+    case 'tou': case 'toughness':
+      return card.toughness != null && card.toughness !== '*' &&
+             compareNum(parseFloat(card.toughness), op, parseFloat(value));
+    case 'e': case 'set':
+      return compareStr(card.set ?? '', op, value);
+    case 'mana': case 'm':
+      return compareStr(card.manaCost ?? '', op, value);
+    case 'is':
+      return matchIs(card, value);
+    case 'usd': case 'price':
+      return card.price != null && compareNum(card.price, op, parseFloat(value));
+    case 'name': case 'n':
+    default:
+      return compareStr((card.name ?? '').toLowerCase(), op, value);
+  }
+}
+
+function cardMatchesQuery(parsedQuery, cardName) {
+  const card = cardData[cardName];
+  // OR between groups, AND within each group
+  return parsedQuery.some(andGroup =>
+    andGroup.every(cond => {
+      const result = matchCondition(cond, card);
+      return cond.neg ? !result : result;
+    })
+  );
+}
+
+function groupMatchesQuery(parsedQuery, group, scope) {
+  if (scope === 'better') return cardMatchesQuery(parsedQuery, group.better);
+  if (scope === 'worse')  return group.worse.some(w => cardMatchesQuery(parsedQuery, w));
+  return cardMatchesQuery(parsedQuery, group.better) ||
+         group.worse.some(w => cardMatchesQuery(parsedQuery, w));
+}
+
+function clearSearch() {
+  document.getElementById("search").value = "";
+
+  applyFilters();
+}
+
 // ── Filter & sort ─────────────────────────────────────────────────────────────
-let currentGroups = [...groupList];
+let currentGroups = [];
+let edhrecLoaded = false;
+let pricesLoaded = false;
+let pricesFetched = 0;
+let loadingSource = null; // 'edhrec' | 'price' | null
 
 function applyFilters() {
-  const query = document.getElementById("search").value.toLowerCase().trim();
+  const rawQuery = document.getElementById("search").value.trim();
+  const query = rawQuery.toLowerCase();
   const sortVal = document.getElementById("sort").value;
 
-  const underplayedOnly = document.getElementById("underplayed-filter").checked;
-  const budgetOnly = document.getElementById("budget-filter").checked;
+  const mobileFilt = document.getElementById("mobile-filter").value;
+  const budgetOnly = document.getElementById("budget-filter").checked || mobileFilt === "budget";
+  const underplayedOnly = document.getElementById("underplayed-filter").checked || mobileFilt === "underplayed";
+
+  if (!edhrecLoaded && (sortVal === "most-played" || underplayedOnly)) {
+    const done = nameList.filter(n => edhrecData[n] !== undefined).length;
+    loadingSource = 'edhrec';
+    document.getElementById("loading-bar").style.width = `${Math.round((done / nameList.length) * 100)}%`;
+    document.getElementById("loading-text").textContent = `Loading EDHRec data… (${done}/${nameList.length})`;
+    document.getElementById("loading").style.display = "flex";
+    return;
+  }
+  if (!pricesLoaded && (sortVal === "price-asc" || sortVal === "price-desc" || budgetOnly)) {
+    loadingSource = 'price';
+    document.getElementById("loading-bar").style.width = `${Math.round((pricesFetched / nameList.length) * 100)}%`;
+    document.getElementById("loading-text").textContent = `Loading price data… (${pricesFetched}/${nameList.length})`;
+    document.getElementById("loading").style.display = "flex";
+    return;
+  }
+  loadingSource = null;
+  document.getElementById("loading").style.display = "none";
+
+  const scope = document.getElementById("search-scope").value;
+  const parsedQuery = (rawQuery && isScryfallQuery(rawQuery))
+    ? parseQueryString(rawQuery)
+    : null;
 
   currentGroups = groupList.filter(g => {
-    if (query && !g.better.toLowerCase().includes(query) &&
-        !g.worse.some(w => w.toLowerCase().includes(query))) return false;
+    if (rawQuery) {
+      if (parsedQuery) {
+        if (!groupMatchesQuery(parsedQuery, g, scope)) return false;
+      } else {
+        const bl = g.better.toLowerCase();
+        const matchBetter = bl.includes(query);
+        const matchWorse  = g.worse.some(w => w.toLowerCase().includes(query));
+        if (scope === 'better' && !matchBetter) return false;
+        if (scope === 'worse'  && !matchWorse)  return false;
+        if (scope === 'all'    && !matchBetter && !matchWorse) return false;
+      }
+    }
     if (budgetOnly) {
       const betterPrice = cardData[g.better]?.price ?? null;
       if (betterPrice === null) return false;
@@ -1113,6 +1172,10 @@ function applyFilters() {
       return pa - pb;
     }
     if (sortVal === "beats-desc") return b.worse.length - a.worse.length;
+    if (sortVal === "most-played") {
+      const maxDecks = g => Math.max(...g.worse.map(w => edhrecData[w]?.numDecks ?? 0));
+      return maxDecks(b) - maxDecks(a);
+    }
     return 0;
   });
 
@@ -1152,16 +1215,91 @@ window.addEventListener("scroll", () => {
   lastScrollY = currentScrollY;
 }, { passive: true });
 
-document.getElementById("search").addEventListener("input", applyFilters);
+document.getElementById("search").addEventListener("input", () => {
+  const q = document.getElementById("search").value.trim();
+
+  applyFilters();
+});
+document.getElementById("search-scope").addEventListener("change", applyFilters);
+document.getElementById("mobile-filter").addEventListener("change", applyFilters);
 document.getElementById("sort").addEventListener("change", applyFilters);
 document.getElementById("budget-filter").addEventListener("change", applyFilters);
 document.getElementById("underplayed-filter").addEventListener("change", applyFilters);
 
 (async () => {
-  await loadAllCards();
+  const text = document.getElementById("loading-text");
+  const bar = document.getElementById("loading-bar");
+  text.textContent = "Loading card data…";
+
+  let pairsData, cacheData;
+  try {
+    [pairsData, cacheData] = await Promise.all([
+      fetch('./card-pairs.json').then(r => r.json()),
+      fetch('./card-cache.json').then(r => r.json()),
+    ]);
+  } catch (e) {
+    text.textContent = "Failed to load card data. Please refresh.";
+    console.error(e);
+    return;
+  }
+
+  // Build groups from pairs
+  const rawGroups = {};
+  for (const [better, ...worse] of pairsData) {
+    if (!rawGroups[better]) rawGroups[better] = new Set();
+    for (const w of worse) rawGroups[better].add(w);
+  }
+  groupList = Object.entries(rawGroups).map(([better, worseSet]) => ({
+    better,
+    worse: [...worseSet],
+  }));
+
+  // Collect all unique names
+  const allNames = new Set();
+  for (const { better, worse } of groupList) {
+    allNames.add(better);
+    for (const w of worse) allNames.add(w);
+  }
+  nameList = [...allNames];
+
+  // Populate cardData with static metadata from cache
+  const staticCards = cacheData.cards ?? {};
+  for (const name of nameList) {
+    const c = staticCards[name];
+    if (c) {
+      cardData[name] = {
+        ...c,
+        price: null,
+        priceLabel: "—",
+        foil: false,
+        tcgplayer: null,
+      };
+    }
+  }
+
+  // Apply cached prices before first render so they're visible immediately
+  const cachedPrices = loadCachedPrices();
+  if (cachedPrices) {
+    for (const [name, p] of Object.entries(cachedPrices)) {
+      if (cardData[name]) Object.assign(cardData[name], p);
+    }
+    pricesLoaded = true;
+    pricesFetched = nameList.length;
+  }
+
+  // Apply cached EDHRec data before first render so sort/filter work immediately
+  const cachedEdhrec = loadCachedEdhrecData();
+  if (cachedEdhrec) {
+    for (const [name, d] of Object.entries(cachedEdhrec)) {
+      edhrecData[name] = d;
+    }
+    edhrecLoaded = true;
+  }
+
   document.getElementById("loading").style.display = "none";
   applyFilters();
-  loadEdhrecData(); // runs in background, updates anchors as data arrives
+  if (!cachedEdhrec) loadEdhrecData(); // fetch in background if not cached
+  if (!cachedPrices) loadPrices(); // fetch prices in background if not cached
 })();
 </script>
 </body>
