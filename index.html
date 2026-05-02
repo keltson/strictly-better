@@ -526,6 +526,42 @@
       transform: translateY(-100%);
     }
   }
+
+  #pagination {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 32px 24px 48px;
+  }
+
+  #pagination button {
+    background: rgba(255,255,255,0.08);
+    color: #d8d8d8;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  #pagination button:hover:not(:disabled) {
+    background: rgba(255,255,255,0.14);
+    border-color: #888;
+  }
+
+  #pagination button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  #page-info {
+    color: #aaa;
+    font-size: 0.9rem;
+    min-width: 90px;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
@@ -585,6 +621,12 @@
 
 <div id="scroll-sentinel"></div>
 <main id="main-content"></main>
+
+<nav id="pagination">
+  <button id="page-prev">← Previous</button>
+  <span id="page-info"></span>
+  <button id="page-next">Next →</button>
+</nav>
 
 <footer>
   <p>This list contains cards from EDHRec's top 5,000 cards that have better versions based on Scryfall's "better than" tags. Card list pulled May 1, 2026.</p>
@@ -1098,6 +1140,8 @@ function clearSearch() {
 
 // ── Filter & sort ─────────────────────────────────────────────────────────────
 let currentGroups = [];
+let currentPage = 0;
+const PAGE_SIZE = 50;
 let edhrecLoaded = false;
 let pricesLoaded = false;
 let pricesFetched = 0;
@@ -1179,6 +1223,7 @@ function applyFilters() {
     return 0;
   });
 
+  currentPage = 0;
   renderAll();
 }
 
@@ -1187,14 +1232,29 @@ function renderAll() {
   container.innerHTML = "";
   document.getElementById("results-count").textContent = currentGroups.length;
 
+  const totalPages = Math.ceil(currentGroups.length / PAGE_SIZE);
+  if (currentPage >= totalPages) currentPage = Math.max(0, totalPages - 1);
+
   if (currentGroups.length === 0) {
     container.innerHTML = '<div class="no-results">No cards match your filters.</div>';
+    updatePagination(0, 0);
     return;
   }
 
+  const start = currentPage * PAGE_SIZE;
   const frag = document.createDocumentFragment();
-  for (const g of currentGroups) frag.appendChild(renderGroup(g));
+  for (const g of currentGroups.slice(start, start + PAGE_SIZE)) frag.appendChild(renderGroup(g));
   container.appendChild(frag);
+  updatePagination(currentPage, totalPages);
+}
+
+function updatePagination(page, totalPages) {
+  const nav = document.getElementById("pagination");
+  if (totalPages <= 1) { nav.style.display = "none"; return; }
+  nav.style.display = "flex";
+  document.getElementById("page-info").textContent = `Page ${page + 1} of ${totalPages}`;
+  document.getElementById("page-prev").disabled = page === 0;
+  document.getElementById("page-next").disabled = page === totalPages - 1;
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -1217,8 +1277,15 @@ window.addEventListener("scroll", () => {
 
 document.getElementById("search").addEventListener("input", () => {
   const q = document.getElementById("search").value.trim();
-
   applyFilters();
+});
+
+document.getElementById("page-prev").addEventListener("click", () => {
+  if (currentPage > 0) { currentPage--; renderAll(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+});
+document.getElementById("page-next").addEventListener("click", () => {
+  const totalPages = Math.ceil(currentGroups.length / PAGE_SIZE);
+  if (currentPage < totalPages - 1) { currentPage++; renderAll(); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
 document.getElementById("search-scope").addEventListener("change", applyFilters);
 document.getElementById("mobile-filter").addEventListener("change", applyFilters);
@@ -1262,7 +1329,7 @@ document.getElementById("underplayed-filter").addEventListener("change", applyFi
   }
   nameList = [...allNames];
 
-  // Populate cardData with static metadata from cache
+  // Populate cardData with static metadata from cache; also load baked EDHRec data
   const staticCards = cacheData.cards ?? {};
   for (const name of nameList) {
     const c = staticCards[name];
@@ -1274,6 +1341,13 @@ document.getElementById("underplayed-filter").addEventListener("change", applyFi
         foil: false,
         tcgplayer: null,
       };
+      if ('edhrec' in c) {
+        const ed = c.edhrec;
+        edhrecData[name] = ed
+          ? { numDecks: ed.numDecks, potentialDecks: ed.potentialDecks, pct: ((ed.numDecks / ed.potentialDecks) * 100).toFixed(2) }
+          : null;
+        edhrecLoaded = true;
+      }
     }
   }
 
@@ -1287,18 +1361,20 @@ document.getElementById("underplayed-filter").addEventListener("change", applyFi
     pricesFetched = nameList.length;
   }
 
-  // Apply cached EDHRec data before first render so sort/filter work immediately
-  const cachedEdhrec = loadCachedEdhrecData();
-  if (cachedEdhrec) {
-    for (const [name, d] of Object.entries(cachedEdhrec)) {
-      edhrecData[name] = d;
+  // Fall back to localStorage EDHRec cache or live fetch if no baked data
+  if (!edhrecLoaded) {
+    const cachedEdhrec = loadCachedEdhrecData();
+    if (cachedEdhrec) {
+      for (const [name, d] of Object.entries(cachedEdhrec)) {
+        edhrecData[name] = d;
+      }
+      edhrecLoaded = true;
     }
-    edhrecLoaded = true;
   }
 
   document.getElementById("loading").style.display = "none";
   applyFilters();
-  if (!cachedEdhrec) loadEdhrecData(); // fetch in background if not cached
+  if (!edhrecLoaded) loadEdhrecData(); // live fetch only if no baked or cached data
   if (!cachedPrices) loadPrices(); // fetch prices in background if not cached
 })();
 </script>

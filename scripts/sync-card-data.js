@@ -28,6 +28,7 @@ const SCRYFALL_COLLECT  = 'https://api.scryfall.com/cards/collection';
 const SCRYFALL_BATCH    = 75;   // Scryfall collection API max per request
 const SCRYFALL_DELAY    = 100;  // ms between Scryfall API calls (required: 50–100ms)
 const TAGGER_DELAY      = 300;  // ms between tagger pages (be polite)
+const EDHREC_CONCURRENCY = 8;   // parallel EDHRec requests
 const USER_AGENT        = 'strictly-better-sync/1.0 (github.com/keltson/strictly-better)';
 
 const SEARCH_EDGES_QUERY = `
@@ -380,6 +381,58 @@ async function updateCache(pairs, rawCache) {
 }
 
 // ---------------------------------------------------------------------------
+// Step 4 — Fetch EDHRec inclusion data
+// ---------------------------------------------------------------------------
+
+function edhrecSlug(name) {
+  return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '-');
+}
+
+async function fetchEdhrecCard(name) {
+  const url = `https://json.edhrec.com/pages/cards/${edhrecSlug(name)}.json`;
+  try {
+    const res = await get(url);
+    if (res.status !== 200) return null;
+    const json = parseJson(res.body, `EDHRec ${name}`);
+    const card = json?.container?.json_dict?.card ?? json?.card ?? null;
+    if (!card) return null;
+    const num = card.num_decks ?? null;
+    const potential = card.potential_decks ?? null;
+    if (num == null || potential == null || potential === 0) return null;
+    return { numDecks: num, potentialDecks: potential };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchAllEdhrec(cards) {
+  console.log('\n=== Step 4: Fetching EDHRec inclusion data ===');
+  const names = Object.keys(cards);
+  console.log(`  ${names.length} cards, ${EDHREC_CONCURRENCY} concurrent workers`);
+
+  const queue = [...names];
+  let done = 0;
+  let found = 0;
+
+  async function worker() {
+    while (queue.length > 0) {
+      const name = queue.shift();
+      const result = await fetchEdhrecCard(name);
+      cards[name].edhrec = result;
+      if (result) found++;
+      done++;
+      if (done % 200 === 0 || done === names.length) {
+        process.stdout.write(`\r  ${done}/${names.length} fetched, ${found} with data…`);
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: EDHREC_CONCURRENCY }, worker));
+  process.stdout.write('\n');
+  console.log(`  Done. ${found}/${names.length} cards have EDHRec data.`);
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -438,6 +491,9 @@ async function main() {
 
   // Step 3: filter to Commander-legal pairs and prune orphaned cache entries
   const { legalPairs, cards: legalCards } = filterCommander(flatPairs, updatedCache.cards);
+
+  // Step 4: fetch EDHRec inclusion data for all cards
+  await fetchAllEdhrec(legalCards);
 
   const finalCache = { generated: new Date().toISOString(), count: Object.keys(legalCards).length, cards: legalCards };
   const groupedPairs = groupPairs(legalPairs);
