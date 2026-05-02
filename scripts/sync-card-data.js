@@ -394,22 +394,60 @@ function groupPairs(flatPairs) {
   return [...groups.values()];
 }
 
+// Remove pairs where either card is not legal in Commander, then prune orphaned
+// cache entries. Returns { legalPairs, cards }.
+function filterCommander(flatPairs, cards) {
+  console.log('\n=== Step 3: Filtering by Commander legality ===');
+
+  let notLegal = 0;
+  let notFound = 0;
+  const legalPairs = flatPairs.filter(({ better, worse }) => {
+    for (const name of [better, worse]) {
+      const c = cards[name];
+      if (!c) { notFound++; return false; }
+      if (c.legalities?.commander !== 'legal') { notLegal++; return false; }
+    }
+    return true;
+  });
+
+  const removed = flatPairs.length - legalPairs.length;
+  console.log(`  Pairs removed : ${removed} (${notLegal} not legal, ${notFound} not found in cache)`);
+
+  // Prune cards no longer referenced by any pair
+  const referenced = new Set();
+  for (const { better, worse } of legalPairs) {
+    referenced.add(better);
+    referenced.add(worse);
+  }
+  const prunedCards = Object.fromEntries(
+    Object.entries(cards).filter(([name]) => referenced.has(name))
+  );
+  console.log(`  Cards removed : ${Object.keys(cards).length - Object.keys(prunedCards).length} (no longer in any pair)`);
+  console.log(`  Remaining     : ${legalPairs.length} pairs, ${Object.keys(prunedCards).length} cards`);
+
+  return { legalPairs, cards: prunedCards };
+}
+
 async function main() {
   // Step 1: fetch all pairs from Tagger
   const flatPairs = await fetchAllPairs();
-  const groupedPairs = groupPairs(flatPairs);
-
-  writeJson(PAIRS_TMP, groupedPairs);
-  console.log(`\n  Wrote ${groupedPairs.length} groups (${flatPairs.length} pairs) to ${path.basename(PAIRS_TMP)}`);
 
   // Step 2: update cache with any new cards
   const existingCache = loadJson(CACHE_PATH, {});
   const updatedCache  = await updateCache(flatPairs, existingCache);
 
-  writeJson(CACHE_TMP, updatedCache);
-  console.log(`  Wrote ${updatedCache.count} entries to ${path.basename(CACHE_TMP)}`);
+  // Step 3: filter to Commander-legal pairs and prune orphaned cache entries
+  const { legalPairs, cards: legalCards } = filterCommander(flatPairs, updatedCache.cards);
 
-  // Atomic replace — only reached if both steps succeeded
+  const finalCache = { generated: new Date().toISOString(), count: Object.keys(legalCards).length, cards: legalCards };
+  const groupedPairs = groupPairs(legalPairs);
+
+  writeJson(PAIRS_TMP, groupedPairs);
+  writeJson(CACHE_TMP, finalCache);
+  console.log(`\n  Wrote ${groupedPairs.length} groups (${legalPairs.length} pairs) to ${path.basename(PAIRS_TMP)}`);
+  console.log(`  Wrote ${finalCache.count} entries to ${path.basename(CACHE_TMP)}`);
+
+  // Atomic replace — only reached if all steps succeeded
   fs.renameSync(PAIRS_TMP, PAIRS_PATH);
   fs.renameSync(CACHE_TMP, CACHE_PATH);
   console.log('\n✓ card-pairs.json and card-cache.json updated successfully.');
