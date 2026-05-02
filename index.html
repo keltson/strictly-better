@@ -251,7 +251,6 @@
   .divider span {
     display: block;
     text-align: center;
-    max-width: 44px;
   }
 
   .worse-cards {
@@ -628,79 +627,54 @@
     text-align: center;
   }
 
-  /* ── Decklist row ─────────────────────────────────────────────────────────── */
-  .decklist-row {
-    flex-basis: 100%;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 6px 0;
-  }
-
-  .decklist-input-wrap {
-    position: relative;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .decklist-input-wrap input {
-    width: 100%;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
-    color: #e0e0e0;
-    font-size: 0.9rem;
-    padding: 9px 36px 9px 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .decklist-input-wrap input:focus { border-color: #999; }
-
-  .decklist-input-wrap input.active {
-    border-color: rgba(74, 222, 128, 0.5);
-  }
-
-  #decklist-clear {
+  /* ── Search load button (shown when a deck URL is detected) ──────────────── */
+  #search-load-btn {
     position: absolute;
-    right: 10px;
+    right: 34px;
     top: 50%;
     transform: translateY(-50%);
+    background: rgba(74, 222, 128, 0.15);
+    border: 1px solid rgba(74, 222, 128, 0.4);
+    border-radius: 6px;
+    color: #4ade80;
+    font-size: 0.75rem;
+    padding: 3px 9px;
+    cursor: pointer;
+    display: none;
+    transition: background 0.15s;
+  }
+
+  #search-load-btn:hover { background: rgba(74, 222, 128, 0.28); }
+
+  .search-wrap input.url-mode { padding-right: 82px; }
+
+  .search-wrap input.decklist-active { border-color: rgba(74, 222, 128, 0.5); }
+
+  /* ── Decklist loaded badge ────────────────────────────────────────────────── */
+  #decklist-badge {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.78rem;
+    color: #4ade80;
+    white-space: nowrap;
+  }
+
+  #decklist-badge button {
     background: none;
     border: none;
-    color: rgba(255,255,255,0.4);
+    color: rgba(74, 222, 128, 0.55);
     cursor: pointer;
-    font-size: 1rem;
-    display: none;
+    font-size: 0.85rem;
+    padding: 0;
+    line-height: 1;
   }
 
-  #decklist-load-btn {
-    background: rgba(74, 222, 128, 0.12);
-    border: 1px solid rgba(74, 222, 128, 0.35);
-    border-radius: 8px;
-    color: #4ade80;
-    font-size: 0.9rem;
-    padding: 9px 18px;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background 0.15s, border-color 0.15s;
-  }
-
-  #decklist-load-btn:hover {
-    background: rgba(74, 222, 128, 0.22);
-    border-color: rgba(74, 222, 128, 0.55);
-  }
-
-  .decklist-status {
-    font-size: 0.8rem;
-    white-space: nowrap;
-    flex-shrink: 0;
-    min-width: 0;
-  }
-
-  .decklist-status.loading { color: rgba(255,255,255,0.45); }
-  .decklist-status.success { color: #4ade80; }
-  .decklist-status.error   { color: #f87171; }
+  #decklist-badge button:hover { color: #4ade80; }
 
   /* ── In-decklist card highlight ───────────────────────────────────────────── */
   .card-item.in-decklist .card-img-wrap {
@@ -728,7 +702,8 @@
   <div class="controls">
     <div class="search-group">
       <div class="search-wrap">
-        <input type="text" id="search" placeholder="Search using Scryfall syntax">
+        <input type="text" id="search" placeholder="Search cards or paste a Moxfield / Archidekt URL…">
+        <button id="search-load-btn">Load</button>
         <button class="clear-btn" onclick="document.getElementById('search').value='';clearSearch()">✕</button>
       </div>
     </div>
@@ -742,16 +717,6 @@
 
         <option value="most-played">Most played</option>
       </select>
-    </div>
-    <div class="controls-break"></div>
-    <div class="decklist-row">
-      <label class="sort-label">Decklist</label>
-      <div class="decklist-input-wrap">
-        <input type="url" id="decklist-url" placeholder="Paste a Moxfield or Archidekt deck URL…">
-        <button id="decklist-clear">✕</button>
-      </div>
-      <button id="decklist-load-btn">Load</button>
-      <span id="decklist-status" class="decklist-status"></span>
     </div>
     <div class="controls-break"></div>
     <div class="controls-row-2">
@@ -768,6 +733,7 @@
         <option value="budget">Budget upgrades</option>
         <option value="underplayed">Underplayed</option>
       </select>
+      <div id="decklist-badge"><span id="decklist-badge-text"></span><button id="decklist-badge-clear">✕</button></div>
       <div class="stat-badge" style="margin-left:auto">Showing <span id="results-count">—</span> cards</div>
     </div>
   </div>
@@ -824,41 +790,43 @@ let nameList = [];
 let decklistCards = new Set();
 
 async function loadDecklist() {
-  const urlInput = document.getElementById("decklist-url");
-  const statusEl = document.getElementById("decklist-status");
-  const clearBtn = document.getElementById("decklist-clear");
-  const url = urlInput.value.trim();
+  const searchInput = document.getElementById("search");
+  const loadBtn = document.getElementById("search-load-btn");
+  const url = searchInput.value.trim();
   if (!url) return;
 
-  statusEl.textContent = "Loading…";
-  statusEl.className = "decklist-status loading";
+  loadBtn.textContent = "…";
+  loadBtn.disabled = true;
 
   try {
     const res = await fetch(`/api/decklist?url=${encodeURIComponent(url)}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? "Unknown error");
     decklistCards = new Set(data.cards.map(n => n.toLowerCase()));
-    statusEl.textContent = `${data.cards.length} cards loaded`;
-    statusEl.className = "decklist-status success";
-    urlInput.classList.add("active");
-    clearBtn.style.display = "block";
+
+    searchInput.value = "";
+    searchInput.classList.remove("url-mode");
+    searchInput.classList.add("decklist-active");
+    loadBtn.style.display = "none";
+
+    const badge = document.getElementById("decklist-badge");
+    document.getElementById("decklist-badge-text").textContent = `${data.cards.length} decklist cards`;
+    badge.style.display = "flex";
   } catch (e) {
-    statusEl.textContent = `Error: ${e.message}`;
-    statusEl.className = "decklist-status error";
+    loadBtn.textContent = "Load";
+    loadBtn.disabled = false;
+    searchInput.placeholder = `Error: ${e.message}`;
+    setTimeout(() => { searchInput.placeholder = "Search cards or paste a Moxfield / Archidekt URL…"; }, 3000);
     decklistCards = new Set();
-    urlInput.classList.remove("active");
   }
   applyFilters();
 }
 
 function clearDecklist() {
   decklistCards = new Set();
-  const urlInput = document.getElementById("decklist-url");
-  urlInput.value = "";
-  urlInput.classList.remove("active");
-  document.getElementById("decklist-status").textContent = "";
-  document.getElementById("decklist-status").className = "decklist-status";
-  document.getElementById("decklist-clear").style.display = "none";
+  const searchInput = document.getElementById("search");
+  searchInput.classList.remove("decklist-active");
+  document.getElementById("decklist-badge").style.display = "none";
   applyFilters();
 }
 
@@ -1177,7 +1145,7 @@ function renderGroup(group) {
   divider.className = "divider";
   divider.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M5 12h14M12 5l7 7-7 7"/>
-  </svg><span>better than</span>`;
+  </svg><span>better<br>than</span>`;
   layout.appendChild(divider);
 
   const worseWrap = document.createElement("div");
@@ -1361,8 +1329,13 @@ function groupMatchesQuery(parsedQuery, group, scope) {
 }
 
 function clearSearch() {
-  document.getElementById("search").value = "";
-
+  const searchInput = document.getElementById("search");
+  searchInput.value = "";
+  searchInput.classList.remove("url-mode");
+  const loadBtn = document.getElementById("search-load-btn");
+  loadBtn.style.display = "none";
+  loadBtn.textContent = "Load";
+  loadBtn.disabled = false;
   applyFilters();
 }
 
@@ -1505,7 +1478,14 @@ window.addEventListener("scroll", () => {
 
 document.getElementById("search").addEventListener("input", () => {
   const q = document.getElementById("search").value.trim();
-  applyFilters();
+  const isDeckUrl = /moxfield\.com\/decks\/|archidekt\.com\/decks\//.test(q);
+  const loadBtn = document.getElementById("search-load-btn");
+  const searchInput = document.getElementById("search");
+  loadBtn.style.display = isDeckUrl ? "block" : "none";
+  loadBtn.textContent = "Load";
+  loadBtn.disabled = false;
+  searchInput.classList.toggle("url-mode", isDeckUrl);
+  if (!isDeckUrl) applyFilters();
 });
 
 document.getElementById("page-prev").addEventListener("click", () => {
@@ -1516,9 +1496,11 @@ document.getElementById("page-next").addEventListener("click", () => {
   if (currentPage < totalPages - 1) { currentPage++; renderAll(); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
 document.getElementById("mobile-filter").addEventListener("change", applyFilters);
-document.getElementById("decklist-load-btn").addEventListener("click", loadDecklist);
-document.getElementById("decklist-clear").addEventListener("click", clearDecklist);
-document.getElementById("decklist-url").addEventListener("keydown", e => { if (e.key === "Enter") loadDecklist(); });
+document.getElementById("search-load-btn").addEventListener("click", loadDecklist);
+document.getElementById("decklist-badge-clear").addEventListener("click", clearDecklist);
+document.getElementById("search").addEventListener("keydown", e => {
+  if (e.key === "Enter" && /moxfield\.com\/decks\/|archidekt\.com\/decks\//.test(document.getElementById("search").value)) loadDecklist();
+});
 document.getElementById("sort").addEventListener("change", applyFilters);
 document.getElementById("budget-filter").addEventListener("change", applyFilters);
 document.getElementById("underplayed-filter").addEventListener("change", applyFilters);
