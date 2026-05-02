@@ -65,11 +65,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit — data is already up to date."
           else
-            CHANGED=$(git diff --cached --name-only | tr '\n' ' ')
-            git commit -m "chore: sync card data [$(date -u +%Y-%m-%d)]
-
-Updated: ${CHANGED}
-Automated run via sync-card-data workflow."
+            git commit -m "chore: sync card data [$(date -u +%Y-%m-%d)]"
             git push
             echo "Changes committed and pushed."
           fi
