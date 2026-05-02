@@ -509,21 +509,11 @@
       gap: 4px 6px;
     }
 
-    .controls-row-2 { display: contents; }
-    .search-group { order: 1; }
-    .controls-break { order: 2; }
-    .sort-wrap { order: 3; flex: 1; }
+    .sort-wrap { flex: 1; }
     .sort-wrap select { width: 100%; }
-    .mobile-filter-select { order: 4; display: block !important; flex: 1; }
-    .stat-badge { order: 5; }
 
-    .sort-label {
-      display: none;
-    }
-
-    .checkbox-filter {
-      display: none !important;
-    }
+    .divider span br { display: none; }
+    .divider span { white-space: nowrap; }
 
     label {
       font-size: 0.78rem;
@@ -627,28 +617,98 @@
     text-align: center;
   }
 
-  /* ── Search load button (shown when a deck URL is detected) ──────────────── */
+  /* ── Search load button (attached outside search bar when URL detected) ───── */
   #search-load-btn {
-    position: absolute;
-    right: 34px;
-    top: 50%;
-    transform: translateY(-50%);
+    display: none;
     background: rgba(74, 222, 128, 0.15);
     border: 1px solid rgba(74, 222, 128, 0.4);
-    border-radius: 6px;
+    border-left: none;
+    border-radius: 0 8px 8px 0;
     color: #4ade80;
-    font-size: 0.75rem;
-    padding: 3px 9px;
+    font-size: 0.9rem;
+    padding: 9px 16px;
     cursor: pointer;
-    display: none;
+    flex-shrink: 0;
+    white-space: nowrap;
     transition: background 0.15s;
   }
 
   #search-load-btn:hover { background: rgba(74, 222, 128, 0.28); }
 
-  .search-wrap input.url-mode { padding-right: 82px; }
+  .search-wrap input.url-mode {
+    border-radius: 8px 0 0 8px;
+    border-right: none;
+  }
 
   .search-wrap input.decklist-active { border-color: rgba(74, 222, 128, 0.5); }
+
+  /* ── Filter dropdown ──────────────────────────────────────────────────────── */
+  .filter-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .filter-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    padding: 9px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, background 0.15s;
+  }
+
+  .filter-btn:hover { border-color: #999; }
+  .filter-btn.active { border-color: #4ade80; color: #4ade80; }
+
+  .filter-count {
+    display: inline-block;
+    background: rgba(74, 222, 128, 0.2);
+    border-radius: 10px;
+    font-size: 0.72rem;
+    padding: 1px 6px;
+    margin-left: 4px;
+  }
+
+  .filter-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    background: #2a2a2a;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    padding: 6px 0;
+    min-width: 190px;
+    z-index: 200;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+
+  .filter-menu.open { display: block; }
+
+  .filter-menu label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #d8d8d8;
+    white-space: nowrap;
+    transition: background 0.1s;
+  }
+
+  .filter-menu label:hover { background: rgba(255,255,255,0.06); }
+
+  .filter-menu input[type="checkbox"] {
+    accent-color: #4ade80;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
 
   /* ── Decklist loaded badge ────────────────────────────────────────────────── */
   #decklist-badge {
@@ -662,6 +722,7 @@
     font-size: 0.78rem;
     color: #4ade80;
     white-space: nowrap;
+    margin-left: auto;
   }
 
   #decklist-badge button {
@@ -703,38 +764,32 @@
     <div class="search-group">
       <div class="search-wrap">
         <input type="text" id="search" placeholder="Search cards or paste a Moxfield / Archidekt URL…">
-        <button id="search-load-btn">Load</button>
         <button class="clear-btn" onclick="document.getElementById('search').value='';clearSearch()">✕</button>
       </div>
+      <button id="search-load-btn">Load</button>
     </div>
-    <div class="sort-wrap">
-      <label class="sort-label">Sort by</label>
-      <select id="sort">
-        <option value="name-asc">Name A–Z</option>
-        <option value="name-desc">Name Z–A</option>
-        <option value="price-desc">Price high–low</option>
-        <option value="price-asc">Price low–high</option>
-
-        <option value="most-played">Most played</option>
-      </select>
+    <div class="filter-wrap" id="filter-wrap">
+      <button class="filter-btn" id="filter-btn">Filter</button>
+      <div class="filter-menu" id="filter-menu">
+        <label><input type="checkbox" id="budget-filter"> Budget upgrades</label>
+        <label><input type="checkbox" id="underplayed-filter"> Underplayed</label>
+        <label><input type="checkbox" id="better-only-filter"> Better cards only</label>
+      </div>
     </div>
     <div class="controls-break"></div>
     <div class="controls-row-2">
-      <label class="checkbox-filter" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-        <input type="checkbox" id="budget-filter" style="accent-color:#4ade80;width:15px;height:15px;cursor:pointer">
-        Budget upgrades
-      </label>
-      <label class="checkbox-filter" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-        <input type="checkbox" id="underplayed-filter" style="accent-color:#4ade80;width:15px;height:15px;cursor:pointer">
-        Underplayed
-      </label>
-      <select id="mobile-filter" class="mobile-filter-select" style="display:none">
-        <option value="none">No filter</option>
-        <option value="budget">Budget upgrades</option>
-        <option value="underplayed">Underplayed</option>
-      </select>
+      <div class="sort-wrap">
+        <label class="sort-label">Sort by</label>
+        <select id="sort">
+          <option value="name-asc">Name A–Z</option>
+          <option value="name-desc">Name Z–A</option>
+          <option value="price-desc">Price high–low</option>
+          <option value="price-asc">Price low–high</option>
+          <option value="most-played">Most played</option>
+        </select>
+      </div>
       <div id="decklist-badge"><span id="decklist-badge-text"></span><button id="decklist-badge-clear">✕</button></div>
-      <div class="stat-badge" style="margin-left:auto">Showing <span id="results-count">—</span> cards</div>
+      <div class="stat-badge" style="margin-left:auto">Showing <span id="results-count">—</span> better cards</div>
     </div>
   </div>
 </header>
@@ -777,8 +832,8 @@
 </nav>
 
 <footer>
-  <p>This list contains cards from EDHRec's top 5,000 cards that have better versions based on Scryfall's "better than" tags. Card list pulled May 1, 2026.</p>
-  <p>Created by Keltson Howell from The Commander Pod</p>
+  <p>Card relationships based on Scryfall's "better than" tags. Card list updated <span id="sync-date">—</span>.</p>
+  <p>Created by Keltson Howell from <a href="http://www.youtube.com/@TheCommanderPod" target="_blank" rel="noopener" style="color:inherit">The Commander Pod</a></p>
 </footer>
 
 <script>
@@ -810,7 +865,8 @@ async function loadDecklist() {
     loadBtn.style.display = "none";
 
     const badge = document.getElementById("decklist-badge");
-    const deckLabel = data.name ? `"${data.name}"` : "your decklist";
+    const rawName = data.name ?? "your decklist";
+    const deckLabel = rawName.length > 20 ? rawName.slice(0, 20) + "…" : rawName;
     document.getElementById("decklist-badge-text").textContent = `Showing cards in ${deckLabel}`;
     badge.style.display = "flex";
     document.querySelector(".stat-badge").style.display = "none";
@@ -1342,6 +1398,14 @@ function clearSearch() {
   applyFilters();
 }
 
+function updateFilterBtn() {
+  const active = ["budget-filter", "underplayed-filter", "better-only-filter"]
+    .filter(id => document.getElementById(id).checked).length;
+  const btn = document.getElementById("filter-btn");
+  btn.classList.toggle("active", active > 0);
+  btn.textContent = active > 0 ? `Filter (${active})` : "Filter";
+}
+
 // ── Filter & sort ─────────────────────────────────────────────────────────────
 let currentGroups = [];
 let currentPage = 0;
@@ -1356,9 +1420,9 @@ function applyFilters() {
   const query = rawQuery.toLowerCase();
   const sortVal = document.getElementById("sort").value;
 
-  const mobileFilt = document.getElementById("mobile-filter").value;
-  const budgetOnly = document.getElementById("budget-filter").checked || mobileFilt === "budget";
-  const underplayedOnly = document.getElementById("underplayed-filter").checked || mobileFilt === "underplayed";
+  const budgetOnly = document.getElementById("budget-filter").checked;
+  const underplayedOnly = document.getElementById("underplayed-filter").checked;
+  const betterOnly = document.getElementById("better-only-filter").checked;
 
   if (!edhrecLoaded && (sortVal === "most-played" || underplayedOnly)) {
     const done = nameList.filter(n => edhrecData[n] !== undefined).length;
@@ -1385,12 +1449,11 @@ function applyFilters() {
   currentGroups = groupList.filter(g => {
     if (rawQuery) {
       if (parsedQuery) {
-        if (!groupMatchesQuery(parsedQuery, g, 'all')) return false;
+        if (!groupMatchesQuery(parsedQuery, g, betterOnly ? 'better' : 'all')) return false;
       } else {
-        const bl = g.better.toLowerCase();
-        const matchBetter = bl.includes(query);
+        const matchBetter = g.better.toLowerCase().includes(query);
         const matchWorse  = g.worse.some(w => w.toLowerCase().includes(query));
-        if (!matchBetter && !matchWorse) return false;
+        if (betterOnly ? !matchBetter : (!matchBetter && !matchWorse)) return false;
       }
     }
     if (budgetOnly) {
@@ -1498,15 +1561,25 @@ document.getElementById("page-next").addEventListener("click", () => {
   const totalPages = Math.ceil(currentGroups.length / PAGE_SIZE);
   if (currentPage < totalPages - 1) { currentPage++; renderAll(); window.scrollTo({ top: 0, behavior: "smooth" }); }
 });
-document.getElementById("mobile-filter").addEventListener("change", applyFilters);
 document.getElementById("search-load-btn").addEventListener("click", loadDecklist);
 document.getElementById("decklist-badge-clear").addEventListener("click", clearDecklist);
 document.getElementById("search").addEventListener("keydown", e => {
   if (e.key === "Enter" && /moxfield\.com\/decks\/|archidekt\.com\/decks\//.test(document.getElementById("search").value)) loadDecklist();
 });
 document.getElementById("sort").addEventListener("change", applyFilters);
-document.getElementById("budget-filter").addEventListener("change", applyFilters);
-document.getElementById("underplayed-filter").addEventListener("change", applyFilters);
+
+["budget-filter", "underplayed-filter", "better-only-filter"].forEach(id => {
+  document.getElementById(id).addEventListener("change", () => { updateFilterBtn(); applyFilters(); });
+});
+
+document.getElementById("filter-btn").addEventListener("click", e => {
+  e.stopPropagation();
+  document.getElementById("filter-menu").classList.toggle("open");
+});
+document.addEventListener("click", e => {
+  if (!document.getElementById("filter-wrap").contains(e.target))
+    document.getElementById("filter-menu").classList.remove("open");
+});
 
 (async () => {
   let pairsData, cacheData;
@@ -1542,6 +1615,11 @@ document.getElementById("underplayed-filter").addEventListener("change", applyFi
   nameList = [...allNames];
 
   // Populate cardData with static metadata from cache; also load baked EDHRec data
+  if (cacheData.generated) {
+    const d = new Date(cacheData.generated);
+    document.getElementById("sync-date").textContent = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  }
+
   const staticCards = cacheData.cards ?? {};
   for (const name of nameList) {
     const c = staticCards[name];
