@@ -784,7 +784,7 @@ async function loadPrices() {
     const lookup = Object.fromEntries(chunk.map(n => [scryfallName(n), n]));
     try {
       const identifiers = Object.keys(lookup).map(name => ({ name }));
-      const res = await fetch("https://api.scryfall.com/cards/collection", {
+      const res = await fetch("/api/prices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifiers }),
