@@ -39,7 +39,7 @@
     top: 0;
     z-index: 100;
     box-shadow: 0 4px 30px rgba(0,0,0,0.6);
-    transition: padding 0.5s ease, transform 0.3s ease;
+    transition: padding 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
   }
 
   header::after {
@@ -54,11 +54,11 @@
   .h1-wrap {
     display: grid;
     grid-template-rows: 1fr;
-    transition: grid-template-rows 0.5s ease;
+    transition: grid-template-rows 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   header h1 {
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 700;
     letter-spacing: 1px;
     margin-top: 16px;
@@ -67,7 +67,7 @@
     overflow: hidden;
     min-height: 0;
     opacity: 1;
-    transition: opacity 0.5s ease, margin-bottom 0.5s ease;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), margin-top 0.5s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     color: #e8e8e4;
   }
 
@@ -81,6 +81,7 @@
 
   header.condensed h1 {
     opacity: 0;
+    margin-top: 0;
     margin-bottom: 0;
   }
 
@@ -109,6 +110,10 @@
     align-items: center;
     gap: 10px;
     padding: 0 6px;
+  }
+
+  .controls-row-2:has(#decklist-badge[style*="flex"]) {
+    padding-right: 0;
   }
 
   .search-group {
@@ -148,13 +153,14 @@
 
   .search-wrap input {
     width: 100%;
+    height: 40px;
     background: var(--bg-card);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 9999px;
     color: #f0f0f0;
     font-family: 'Poppins', system-ui, sans-serif;
     font-size: 0.9rem;
-    padding: 9px 36px 9px 16px;
+    padding: 0 36px 0 16px;
     outline: none;
     transition: border-color 0.2s, background 0.2s;
   }
@@ -184,6 +190,7 @@
   }
 
   select {
+    height: 40px;
     background: var(--bg-card);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23aaa'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
@@ -196,7 +203,7 @@
     font-family: 'Poppins', system-ui, sans-serif;
     font-size: 0.82rem;
     font-weight: 500;
-    padding: 9px 30px 9px 14px;
+    padding: 0 30px 0 14px;
     cursor: pointer;
     outline: none;
     transition: border-color 0.2s, background 0.2s;
@@ -521,7 +528,7 @@
     header h1 {
       font-size: 1rem;
       margin-bottom: 12px;
-      text-align: left;
+      text-align: center;
     }
 
     header.condensed {
@@ -682,7 +689,7 @@
     border-right: none;
   }
 
-  .search-wrap input.decklist-active { border-color: rgba(74, 222, 128, 0.4); }
+  .search-wrap input.decklist-active { border-color: rgba(255,255,255,0.1); }
 
   .filter-wrap {
     position: relative;
@@ -690,6 +697,7 @@
   }
 
   .filter-btn {
+    height: 40px;
     background: var(--bg-card);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 9999px;
@@ -697,7 +705,7 @@
     font-family: 'Poppins', system-ui, sans-serif;
     font-size: 0.82rem;
     font-weight: 600;
-    padding: 9px 18px;
+    padding: 0 18px;
     cursor: pointer;
     white-space: nowrap;
     transition: border-color 0.2s, background 0.15s;
@@ -836,7 +844,7 @@
   <div class="controls">
     <div class="search-group">
       <div class="search-wrap">
-        <input type="text" id="search" placeholder="Search cards or paste a Moxfield / Archidekt URL…">
+        <input type="text" id="search" placeholder="Search cards or paste a decklist URL…">
         <button class="clear-btn" onclick="document.getElementById('search').value='';clearSearch()">✕</button>
       </div>
       <button id="search-load-btn">Load</button>
@@ -1291,9 +1299,9 @@ function renderGroup(group) {
 
 // ── Local Scryfall-syntax query parser ────────────────────────────────────────
 function isScryfallQuery(q) {
-  return q.includes(":");
+  // Use structured parser when query has field:value syntax or NOT keyword
+  return q.includes(':') || /\bnot\b/i.test(q);
 }
-
 
 // Parse one raw token into { neg, field, op, value }
 function parseToken(tok) {
@@ -1310,7 +1318,7 @@ function parseToken(tok) {
   if (!op && i < tok.length && tok[i] === ':') { op = ':'; i++; }
 
   if (!field || !op || i >= tok.length) {
-    // Bare word — name contains search
+    // Bare word — name contains/excludes search
     const val = neg ? tok.slice(1) : tok;
     return { neg, field: 'name', op: ':', value: val.toLowerCase() };
   }
@@ -1321,13 +1329,21 @@ function parseToken(tok) {
 }
 
 // Returns array of OR-groups; each group is an array of AND-conditions
+// Supports: implicit AND, explicit AND keyword, NOT keyword, OR keyword, - prefix
 function parseQueryString(raw) {
-  return raw.split(/\bor\b/i).map(segment => {
+  return raw.split(/\bOR\b/i).map(segment => {
     const conds = [];
-    // Tokenize respecting quoted strings
     const re = /[^\s"]+(?:"[^"]*"[^\s"]*)*|"[^"]*"/g;
     let m;
-    while ((m = re.exec(segment)) !== null) conds.push(parseToken(m[0]));
+    let pendingNot = false;
+    while ((m = re.exec(segment)) !== null) {
+      const tok = m[0];
+      if (/^AND$/i.test(tok)) continue;
+      if (/^NOT$/i.test(tok)) { pendingNot = true; continue; }
+      const cond = parseToken(tok);
+      if (pendingNot) { cond.neg = !cond.neg; pendingNot = false; }
+      conds.push(cond);
+    }
     return conds;
   }).filter(g => g.length > 0);
 }
@@ -1412,7 +1428,7 @@ function matchCondition(cond, card) {
       return matchColors(card.colors ?? [], op, value);
     case 'ci': case 'id': case 'identity':
       return matchColors(card.colorIdentity ?? [], op, value);
-    case 'mv': case 'cmc':
+    case 'mv': case 'cmc': case 'manavalue':
       return compareNum(card.cmc ?? 0, op, parseFloat(value));
     case 'r': case 'rarity':
       return compareStr(card.rarity ?? '', op, value);
@@ -1420,7 +1436,7 @@ function matchCondition(cond, card) {
       const leg = (card.legalities ?? {})[value];
       return leg === 'legal' || leg === 'restricted';
     }
-    case 'keyword':
+    case 'kw': case 'keyword':
       return (card.keywords ?? []).some(k => k.includes(value));
     case 'pow': case 'power':
       return card.power != null && card.power !== '*' &&
@@ -1428,7 +1444,13 @@ function matchCondition(cond, card) {
     case 'tou': case 'toughness':
       return card.toughness != null && card.toughness !== '*' &&
              compareNum(parseFloat(card.toughness), op, parseFloat(value));
-    case 'e': case 'set':
+    case 'loy': case 'loyalty':
+      return card.loyalty != null && card.loyalty !== '*' &&
+             compareNum(parseFloat(card.loyalty), op, parseFloat(value));
+    case 'def': case 'defense':
+      return card.defense != null && card.defense !== '*' &&
+             compareNum(parseFloat(card.defense), op, parseFloat(value));
+    case 'e': case 's': case 'set':
       return compareStr(card.set ?? '', op, value);
     case 'mana': case 'm':
       return compareStr(card.manaCost ?? '', op, value);
@@ -1524,8 +1546,15 @@ function applyFilters() {
       if (parsedQuery) {
         if (!groupMatchesQuery(parsedQuery, g, betterOnly ? 'better' : 'all')) return false;
       } else {
-        const matchBetter = g.better.toLowerCase().includes(query);
-        const matchWorse  = g.worse.some(w => w.toLowerCase().includes(query));
+        const tokens = query.split(/\s+/).filter(Boolean);
+        const nameMatches = name => {
+          const lc = name.toLowerCase();
+          return tokens.every(t => t.startsWith('-')
+            ? (t.length > 1 && !lc.includes(t.slice(1)))
+            : lc.includes(t));
+        };
+        const matchBetter = nameMatches(g.better);
+        const matchWorse  = g.worse.some(w => nameMatches(w));
         if (betterOnly ? !matchBetter : (!matchBetter && !matchWorse)) return false;
       }
     }
