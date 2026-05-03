@@ -143,7 +143,7 @@
     transition: border-color 0.2s, background 0.2s;
   }
 
-  .search-group select:focus { border-color: rgba(255,255,255,0.25); background: var(--bg-raised); }
+  .search-group select:focus { border-color: rgba(255,255,255,0.25); background-color: var(--bg-raised); }
 
   .search-wrap {
     position: relative;
@@ -206,10 +206,12 @@
     padding: 0 30px 0 14px;
     cursor: pointer;
     outline: none;
-    transition: border-color 0.2s, background 0.2s;
+    transition: border-color 0.2s, background-color 0.15s;
   }
 
-  select:focus { border-color: rgba(255,255,255,0.25); background: var(--bg-raised); }
+  select:hover { background-color: var(--bg-raised); border-color: rgba(255,255,255,0.2); }
+  select:focus { background-color: var(--bg-raised); border-color: rgba(255,255,255,0.25); }
+  select:active { background-color: var(--bg-raised); border-color: rgba(255,255,255,0.3); }
   select option { background: var(--bg-card); }
 
   .stat-badge {
@@ -527,6 +529,7 @@
 
     header h1 {
       font-size: 1rem;
+      margin-top: 8px;
       margin-bottom: 12px;
       text-align: center;
     }
@@ -826,6 +829,7 @@
   @media (max-width: 600px) {
     #decklist-badge { padding: 9px 16px; font-size: 0.88rem; border-radius: 9999px; }
     .filter-menu { left: auto; right: 0; }
+    .stat-suffix { display: none; }
   }
 </style>
 </head>
@@ -870,7 +874,7 @@
         </div>
       </div>
       <div id="decklist-badge"><span id="decklist-badge-text"></span><button id="decklist-badge-clear">✕</button></div>
-      <div class="stat-badge" style="margin-left:auto">Showing <span id="results-count">—</span> better cards</div>
+      <div class="stat-badge" style="margin-left:auto">Showing <span id="results-count">—</span><span class="stat-suffix"> better cards</span></div>
     </div>
   </div>
 </header>
@@ -1633,13 +1637,19 @@ new IntersectionObserver(
 ).observe(document.getElementById("scroll-sentinel"));
 
 let lastScrollY = window.scrollY;
+let scrollUpOrigin = null;
+const SCROLL_UP_BUFFER = 80;
 window.addEventListener("scroll", () => {
   const currentScrollY = window.scrollY;
   const header = document.querySelector("header");
   if (currentScrollY > lastScrollY && currentScrollY > 60) {
     header.classList.add("header-hidden");
+    scrollUpOrigin = null;
   } else {
-    header.classList.remove("header-hidden");
+    if (scrollUpOrigin === null) scrollUpOrigin = lastScrollY;
+    if (scrollUpOrigin - currentScrollY >= SCROLL_UP_BUFFER) {
+      header.classList.remove("header-hidden");
+    }
   }
   lastScrollY = currentScrollY;
 }, { passive: true });
@@ -1668,7 +1678,7 @@ document.getElementById("decklist-badge-clear").addEventListener("click", clearD
 document.getElementById("search").addEventListener("keydown", e => {
   if (e.key === "Enter" && /moxfield\.com\/decks\/|archidekt\.com\/decks\//.test(document.getElementById("search").value)) loadDecklist();
 });
-document.getElementById("sort").addEventListener("change", applyFilters);
+document.getElementById("sort").addEventListener("change", e => { applyFilters(); e.target.blur(); });
 
 ["budget-filter", "underplayed-filter", "better-only-filter"].forEach(id => {
   document.getElementById(id).addEventListener("change", () => { updateFilterBtn(); applyFilters(); });
