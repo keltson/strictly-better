@@ -678,7 +678,8 @@
     font-family: 'Poppins', system-ui, sans-serif;
     font-size: 0.85rem;
     font-weight: 600;
-    padding: 9px 18px;
+    height: 40px;
+    padding: 0 18px;
     cursor: pointer;
     flex-shrink: 0;
     white-space: nowrap;
@@ -848,7 +849,7 @@
   <div class="controls">
     <div class="search-group">
       <div class="search-wrap">
-        <input type="text" id="search" placeholder="Search cards or paste a decklist URL…">
+        <input type="text" id="search" placeholder="Search cards or paste a decklist URL">
         <button class="clear-btn" onclick="document.getElementById('search').value='';clearSearch()">✕</button>
       </div>
       <button id="search-load-btn">Load</button>
